@@ -8,16 +8,17 @@ import sys
 
 # 3rd Party Libs
 import click
-from tabulate import tabulate
+# from tabulate import tabulate
 
 # My Junk
+from nessrest.nessrest import ness6rest
 from lazyLib import lazyTools
 from lazyLib import nessus6Lib
 from lazyLib import LazyCustomTypes
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
-@click.group(name='nessus', context_settings=CONTEXT_SETTINGS, invoke_without_command=False)
+@click.group(name='nessus', context_settings=CONTEXT_SETTINGS, invoke_without_command=True)
 @click.option('-t', '--target', type=click.STRING, help='Server to upload Nessus file. This should be an IP address or hostanme.')
 @click.option('-p', '--port', type=LazyCustomTypes.port, default='8834', help='Port number Nessus server can be accessed on.')
 @click.option('-n', '--name', help='Name of a configuration section', default=False)
@@ -108,23 +109,23 @@ def upload(ctx, local_nessus, remote_folder, test):
             raise click.ClickException('Not connected to corporate VPN.')
     # Try to log in with API keys
     if ctx.obj['access_key'] and ctx.obj['secret_key']:
-        with nessus6Lib(ctx.obj['target'], api_akey=ctx.obj['access_key'], api_skey=ctx.obj['secret_key']) as nessusAPI:
-            if test == False:
-                for full_path in nessus_list:
-                    print(os.path.basename((os.path.join(full_path[0], full_path[1]))))
-                    click.secho('[*] Attempting to upload {}'.format(full_path[1].rstrip()), fg='white')
-                    nessusAPI.upload(os.path.join(full_path[0], full_path[1]))
-                    click.secho('[*] Upload successful.', fg='green')
 
-                    click.secho('[*] Attempting to import the scan into the correct folder.', fg='white')
-                    nessusAPI.scan_import(full_path[1], remote_folder)
-                    click.secho('[*] Import successful.', fg='green')
-            else:
-                click.secho('[*] This was a test. No files were uploaded.', fg='blue', bg='white')
-            click.secho('[*] All done!', fg='green')
-            nessusAPI._log_out()
+        nessusAPI = ness6rest.Scanner(url=ctx.obj['target'], api_akey=ctx.obj['access_key'], api_skey=ctx.obj['secret_key'], insecure=True)
+        if test == False:
+            for full_path in nessus_list:
+                print(os.path.basename((os.path.join(full_path[0], full_path[1]))))
+                click.secho('[*] Attempting to upload {}'.format(full_path[1].rstrip()), fg='white')
+                nessusAPI.upload(os.path.join(full_path[0], full_path[1]))
+                click.secho('[*] Upload successful.', fg='green')
+
+                click.secho('[*] Attempting to import the scan into the correct folder.', fg='white')
+                nessusAPI.scan_import(full_path[1], remote_folder)
+                click.secho('[*] Import successful.', fg='green')
+        else:
+            click.secho('[*] This was a test. No files were uploaded.', fg='blue', bg='white')
+        click.secho('[*] All done!', fg='green')
     elif ctx.obj['username'] and ctx.obj['password']:
-        with nessus6Lib(ctx.obj['target'], login=ctx.obj['username'], password=ctx.obj['password']) as nessusAPI:
+            nessusAPI = ness6rest.Scanner(ctx.obj['target'], login=ctx.obj['username'], password=ctx.obj['password'], insecure=True)
             if test == False:
                 for full_path in nessus_list:
                     click.secho('[*] Attempting to upload {}'.format(full_path[1].rstrip()), fg='white')
@@ -137,7 +138,6 @@ def upload(ctx, local_nessus, remote_folder, test):
             else:
                 click.secho('[*] This was a test. No files were uploaded.', fg='blue', bg='white')
             click.secho('[*] All done!', fg='green')
-            nessusAPI._log_out()
 
 
 @cli.command(name='export', short_help='Export a scan or folder of scans from a Nessus server.')
