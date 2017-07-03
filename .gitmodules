@@ -1,0 +1,3 @@
+[submodule "nessrest"]
+	path = nessrest
+	url = git@github.com:radioboyQ/nessrest.git
