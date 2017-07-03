@@ -13,7 +13,6 @@ import click
 # My Junk
 from nessrest.nessrest import ness6rest
 from lazyLib import lazyTools
-from lazyLib import nessus6Lib
 from lazyLib import LazyCustomTypes
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -59,6 +58,14 @@ def cli(ctx, target, port, name):
 
         ctx.obj = {'target': target, 'port': port, 'username': username, 'password': password}
 
+    if not ctx.obj['target'].startswith('https://'):
+        ctx.obj['target'] = 'https://{}'.format(ctx.obj['target'])
+
+    if ctx.obj['target'].endswith('/'):
+        ctx.obj['target'] = ctx.obj['target'].replace('/', ':{}'.format(ctx.obj['port']))
+    else:
+        ctx.obj['target'] = '{}:{}'.format(ctx.obj['target'], ctx.obj['port'])
+
 
 
 @cli.command(name='upload', context_settings=CONTEXT_SETTINGS, short_help='Upload a folder or series of Nessus files to a server.')
@@ -90,14 +97,6 @@ def upload(ctx, local_nessus, remote_folder, test):
         click.secho('[!] No Nessus files were specified.', fg='red')
         click.secho('[*] Exiting.', fg='green')
         sys.exit()
-
-    if not ctx.obj['target'].startswith('https://'):
-        ctx.obj['target'] = 'https://{}'.format(ctx.obj['target'])
-
-    if ctx.obj['target'].endswith('/'):
-        ctx.obj['target'] = ctx.obj['target'].replace('/', ':{}'.format(ctx.obj['port']))
-    else:
-        ctx.obj['target'] = '{}:{}'.format(ctx.obj['target'], ctx.obj['port'])
 
     # Check if we need to be on the VPN
     if ctx.obj['vpn_required'] == True:
@@ -141,14 +140,12 @@ def upload(ctx, local_nessus, remote_folder, test):
 
 
 @cli.command(name='export', short_help='Export a scan or folder of scans from a Nessus server.')
-@click.option('-i', '--id', required=True, type=click.INT, help='ID of the scan on the Nessus server.')
+@click.option('-i', '--id', required=True, type=click.INT, help='ID of the scan or folder on the Nessus server.')
 @click.option('-o', '--output-path', type=click.Path(exists=False, file_okay=True, dir_okay=True, resolve_path=True, writable=True), help='Location and/or name to save the scan', envvar='PWD')
-@click.option('-t', '--target', type=click.STRING, help='Server to export Nessus file. This should be an IP address or hostanme.', default='dc2astns01.asmt.gps')
-@click.option('-p', '--port', type=click.INT, default='8834')
-@click.option('-eT', '--export-type', help='Define the exported file\'s type.', type=click.Choice(['nessus', 'db', 'pdf', 'html', 'csv']), default='nessus')
+@click.option('-eT', '--export-type', help='Define the exported file\'s type.', type=click.Choice(['nessus', 'pdf', 'html', 'csv']), default='nessus')
 @click.option('--test', is_flag=True, default=False, help='Test authentication to Nessus server.')
 @click.pass_context
-def export(ctx, id, output_path, target, port, test, export_type):
+def export(ctx, id, output_path, test, export_type):
     """
     Export Nessus scans from a file or folder on a remote server
     - Get user credentials - API or username and password
@@ -159,6 +156,46 @@ def export(ctx, id, output_path, target, port, test, export_type):
     - elif scan
     -- Get scan
     """
-    pass
+    if ctx.obj['access_key'] and ctx.obj['secret_key']:
+        folderIDDict = dict()
+        scanIDDict = dict()
 
+        nessusAPI = ness6rest.Scanner(url=ctx.obj['target'], api_akey=ctx.obj['access_key'], api_skey=ctx.obj['secret_key'], debug=False)
+
+        scanFolderDict = nessusAPI.scan_list()
+
+        click.secho('[*] Downloaded scan and folder data. Checking if provided ID is valid.')
+
+        # Get list of folder IDs
+        for folder in scanFolderDict['folders']:
+            folderIDDict.update({folder['id']: folder['name']})
+
+        # Get list of scan IDs
+        for scans in scanFolderDict['scans']:
+            scanIDDict.update({scans['id']:scans['name']})
+
+        # Check if ID is in scans list
+        if id in scanIDDict:
+            nessusAPI.scan_id = id
+            click.secho('[*] Downloading scan: {}'.format(scanIDDict[id]))
+            scanString = nessusAPI.download_scan(export_format=export_type)
+
+            click.secho('[*] Downloaded scan: {}'.format(scanIDDict[id]))
+            with open('{}.{}'.format(os.path.join(output_path, scanIDDict[id]), export_type), 'wb') as f:
+                f.write(scanString)
+            click.secho('[*] Saved {}.{} to disk.'.format(scanIDDict[id], export_type))
+        elif id in folderIDDict:
+            click.secho('[*] Downloading from folder {}'.format(folderIDDict[id]))
+            for scans in scanFolderDict['scans']:
+                if scans['folder_id'] == id:
+                    click.secho('[+] Downloading scan: {}'.format(scans['name']))
+                    nessusAPI.scan_id = scans['id']
+                    scanString = nessusAPI.download_scan(export_format=export_type)
+
+                    # click.secho('[*] Downloaded scan: {}'.format(scans['name']))
+                    with open('{}.{}'.format(os.path.join(output_path, scans['name']), export_type), 'wb') as f:
+                        f.write(scanString)
+                    click.secho('[*] Saved {}.{} to disk.'.format(scans['name'], export_type))
+        else:
+            raise click.BadParameter('{} is not a valid scan or folder number'.format(id))
 
