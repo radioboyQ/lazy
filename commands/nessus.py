@@ -15,6 +15,8 @@ from nessrest.nessrest import ness6rest
 from lazyLib import lazyTools
 from lazyLib import LazyCustomTypes
 
+__version__ = '1.0'
+
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 @click.group(name='nessus', context_settings=CONTEXT_SETTINGS, invoke_without_command=False, short_help='Tools that are useful for interacting with a Nessus scanner.')

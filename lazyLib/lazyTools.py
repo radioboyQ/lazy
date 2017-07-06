@@ -8,6 +8,7 @@ import sys
 import requests
 import toml
 
+__version__ = '1.0'
 
 
 def TOMLConfigImport(filename):

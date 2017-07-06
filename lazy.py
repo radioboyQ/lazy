@@ -18,7 +18,7 @@ requests.packages.urllib3.disable_warnings()
 
 # define our default configuration options
 
-VERSION = '0.0.1'
+__version__ = '1.0'
 
 # Version information
 BANNER = """
