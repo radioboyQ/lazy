@@ -35,8 +35,6 @@ def cli(ctx, target, port, name):
     """
     configOptions = lazyTools.TOMLConfigImport(ctx.parent.params['config_path'])
 
-    # pprint(configOptions['nessus'], indent=4)
-
     if name in configOptions['nessus']:
         # Name given exists, grab hostname, port, access_key, secret_key and determine if VPN is required
         target = configOptions['nessus'][name]['Hostname']
