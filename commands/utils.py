@@ -7,6 +7,8 @@ import click
 # My Junk
 from lazyLib import lazyTools
 
+__version__ = '1.0'
+
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 @click.group(name='utils', short_help='A collection of tools which are useful but don\'t fit anywhere else.', context_settings=CONTEXT_SETTINGS)
