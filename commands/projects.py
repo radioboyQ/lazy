@@ -7,7 +7,7 @@ import arrow
 import click
 from lxml import etree
 
-__version__ = '2.0'
+__version__ = '2.1'
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
