@@ -1,6 +1,8 @@
 import arrow
 import click
 
+__version__ = '1.0'
+
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 @click.group(name='projects', short_help='Useful project tools. Creating projects, naming reports, etc.', context_settings=CONTEXT_SETTINGS, invoke_without_command=False)
