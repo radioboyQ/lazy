@@ -1,5 +1,6 @@
 # Standard Library
 from ipaddress import IPv4Address, IPv6Address, IPv4Network, IPv6Network, ip_address, ip_network
+import subprocess
 import sys
 
 
@@ -38,6 +39,20 @@ def ConnectedToVPN(config_file: str) -> bool:
         print(e)
         sys.exit(1)
 
+def mount_changer(share_location):
+    """
+    # Mount drive if not mounted, unmount if mounted
+    :return: True for successful unmount and False for a failure. Also return error message in tuple
+    """
+    cmd_rtn = subprocess.run("diskutil unmount {}".format(share_location), shell=True, check=False,
+                             stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+
+    if cmd_rtn.returncode == 0:
+        return [True, 'Share unmounted successfully']
+    elif cmd_rtn.returncode != 0:
+        # If it failed somehow, return error msg
+        err_str = '{}'.format(cmd_rtn.stderr.decode("utf-8"))
+        return [False, err_str]
 
 
 class IPTools():
@@ -86,6 +101,7 @@ class IPTools():
                 return ip_network(ip, strict=False)
             except ValueError:
                 raise IPToolsExceptions.NotValidIP("'{}' is not a valid IP network or address".format(ip)) from None
+
 
 
 
