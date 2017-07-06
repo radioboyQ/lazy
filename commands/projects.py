@@ -22,7 +22,7 @@ def cli(ctx):
     pass
 
 @cli.command(name='report-name', help='Generate proper report names. ')
-@click.option('-s', '--client-short', help='Client three letter abbreviation.', type=click.STRING)
+@click.option('-s', '--client-short', help='Client three letter abbreviation.', type=click.STRING, required=True)
 @click.option('-u', '--user-initials', help='User\'s three initials', type=click.STRING, default='SAF')
 @click.option('-t', '--report-type', help='The type of report to create', type=click.Choice(['EPT', 'IPT', 'RSE', 'ept', 'ipt', 'rse']))
 @click.pass_context
