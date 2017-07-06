@@ -17,7 +17,7 @@ from lazyLib import LazyCustomTypes
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
-@click.group(name='nessus', context_settings=CONTEXT_SETTINGS, invoke_without_command=False)
+@click.group(name='nessus', context_settings=CONTEXT_SETTINGS, invoke_without_command=False, short_help='Tools that are useful for interacting with a Nessus scanner.')
 @click.option('-t', '--target', type=click.STRING, help='Server to upload Nessus file. This should be an IP address or hostanme.')
 @click.option('-p', '--port', type=LazyCustomTypes.port, default='8834', help='Port number Nessus server can be accessed on.')
 @click.option('-n', '--name', help='Name of a configuration section', default=False)
