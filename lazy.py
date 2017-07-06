@@ -25,7 +25,7 @@ BANNER = """
 Lazy App v%s
 Sometimes writing code is easier than doing actual work.
 Written by Scott Fraser
-""" % VERSION
+""" % __version__
 
 plugin_folder = os.path.join(os.path.dirname(__file__), 'commands')
 
