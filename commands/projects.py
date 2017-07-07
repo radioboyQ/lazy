@@ -24,15 +24,20 @@ def cli(ctx):
 @cli.command(name='report-name', help='Generate proper report names. ')
 @click.option('-s', '--client-short', help='Client three letter abbreviation.', type=click.STRING, required=True)
 @click.option('-u', '--user-initials', help='User\'s three initials', type=click.STRING, default='SAF')
-@click.option('-t', '--report-type', help='The type of report to create', type=click.Choice(['EPT', 'IPT', 'RSE', 'ept', 'ipt', 'rse']))
+@click.option('-t', '--report-type', help='The type of report to create')
 @click.pass_context
 def report_name(ctx, client_short, user_initials, report_type):
     """
     Generate report names
     Example report name: '{client_short}_{report_type}_{YYYY}-{MM}-{DD}_{user_initials}_v0.1.docx'
+    Example WSR: '{client_short}_WSR_{date}.docx'
     """
     utc = arrow.utcnow()
-    click.secho('{client_short}_{report_type}_{date}_{user_initials}_v0.1.docx'.format(client_short=client_short.upper(), report_type=report_type.upper(), date=utc.to('local').format('YYYY-MM-DD'), user_initials=user_initials))
+
+    if report_type.upper() == 'WSR':
+        click.secho('{client_short}_WSR_{date}.docx'.format(client_short=client_short.upper(), report_type=report_type.upper(), date=utc.to('local').format('YYYY-MM-DD')))
+    else:
+        click.secho('{client_short}_{report_type}_{date}_{user_initials}_v0.1.docx'.format(client_short=client_short.upper(), report_type=report_type.upper(), date=utc.to('local').format('YYYY-MM-DD'), user_initials=user_initials))
 
 @cli.command(name='nmap-service-parsing', context_settings=CONTEXT_SETTINGS, short_help='Parse a given Nmap file and output all accessable services')
 @click.option('-p', '--nmap-path', type=click.Path(exists=True, file_okay=True, dir_okay=True, readable=True, resolve_path=True, allow_dash=True), required=True)
@@ -80,3 +85,6 @@ def nmap_parser(ctx, nmap_path):
 
     else:
         raise click.BadOptionUsage('You can\'t use a folder just yet.', ctx=ctx)
+
+if __name__ == '__main__':
+    cli()
