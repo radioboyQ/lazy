@@ -87,5 +87,17 @@ def nmap_parser(ctx, nmap_path):
     else:
         raise click.BadOptionUsage('You can\'t use a folder just yet.', ctx=ctx)
 
+@cli.command(name='nmap-compare', context_settings=CONTEXT_SETTINGS, short_help='Compare two Nmaps scans and output the differences.')
+@click.argument('Nmap_One', type=click.Path(exists=True, file_okay=True, dir_okay=True, readable=True, resolve_path=True, allow_dash=True))
+@click.argument('Nmap_Two', type=click.Path(exists=True, file_okay=True, dir_okay=True, readable=True, resolve_path=True, allow_dash=True))
+@click.option('-n1', '--nmap-one-name', type=click.STRING, help='Name of the scan to go into the spreadsheet')
+@click.option('-n2', '--nmap-two-name', type=click.STRING, help='Name of the scan to go into the spreadsheet')
+@click.pass_context
+def nmap_compare(ctx, nmap_one, nmap_two, nmap_one_name, nmap_two_name):
+    """
+    Command to compare two different Nmap scans and output a CSV file
+    """
+    pass
+
 if __name__ == '__main__':
     cli()
