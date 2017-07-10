@@ -1,15 +1,57 @@
 # Standard Library
 from ipaddress import IPv4Address, IPv6Address, IPv4Network, IPv6Network, ip_address, ip_network
+import os
 import subprocess
 import sys
 
 
 # 3rd Party Libs
+from lxml import etree
 import requests
 import toml
 
 __version__ = '1.1'
 
+def nmap_parser(nmap_filepath):
+    """
+    Generate a list of dictionaries with `IP`, `PortNumber`, `Protocol`, `Application`, `Version`
+    :param nmap_filepath: Filepath as string
+    :type nmap_filepath: str
+    :return: List of dictionaries
+    :rtype: list
+    """
+    headers = ['Host', 'Port', 'Protocol', 'Application', 'Version']
+
+    finalData = list()
+
+    # Check if the file given is an XML file
+    if os.path.isfile(nmap_filepath) and nmap_filepath.endswith('xml'):
+
+        tree = etree.parse(nmap_filepath)
+
+        root = tree.getroot()
+
+        for h in root.xpath('./host'):
+            for hostAttrib in h:
+                if hostAttrib.tag == 'address':
+                    addr = hostAttrib.attrib['addr']
+                elif hostAttrib.tag == 'ports':
+                    for ports in hostAttrib:
+                        if ports.tag == 'port':
+                            protocol = ports.attrib['protocol']
+                            portNumber = ports.attrib['portid']
+                            for service in ports:
+                                if service.tag == 'service':
+                                    application = service.attrib['name']
+                                    try:
+                                        version = service.attrib['product']
+                                    except KeyError:
+                                        version = ""
+                    data = {'Host': addr, 'Port': portNumber, 'Protocol': protocol, 'Application': application,
+                            'Version': version}
+                    finalData.append(data)
+    else:
+        raise FileNotFoundError('File must end in \'xml\'')
 
 def TOMLConfigImport(filename):
     """Parse a TOML configuration file"""
