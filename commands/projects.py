@@ -35,9 +35,9 @@ def report_name(ctx, client_short, user_initials, report_type):
     utc = arrow.utcnow()
 
     if report_type.upper() == 'WSR':
-        click.secho('{client_short}_WSR_{date}.docx'.format(client_short=client_short.upper(), report_type=report_type.upper(), date=utc.to('local').format('YYYY-MM-DD')))
+        click.secho('{client_short}_WSR_{date}.docx'.format(client_short=client_short.upper(), report_type=report_type.upper(), date=arrow.utcnow().to('local').format('YYYY-MM-DD')))
     else:
-        click.secho('{client_short}_{report_type}_{date}_{user_initials}_v0.1.docx'.format(client_short=client_short.upper(), report_type=report_type.upper(), date=utc.to('local').format('YYYY-MM-DD'), user_initials=user_initials))
+        click.secho('{client_short}_{report_type}_{date}_{user_initials}_v0.1.docx'.format(client_short=client_short.upper(), report_type=report_type.upper(), date=arrow.utcnow().to('local').format('YYYY-MM-DD'), user_initials=user_initials))
 
 @cli.command(name='nmap-service-parsing', context_settings=CONTEXT_SETTINGS, short_help='Parse a given Nmap file and output all accessable services')
 @click.option('-p', '--nmap-path', type=click.Path(exists=True, file_okay=True, dir_okay=True, readable=True, resolve_path=True, allow_dash=True), required=True)
@@ -48,6 +48,7 @@ def nmap_parser(ctx, nmap_path):
     """
 
     headers = ['Host', 'Port', 'Protocol', 'Application', 'Version']
+
     output = io.StringIO()
     finalData = list()
 
