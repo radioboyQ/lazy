@@ -156,6 +156,16 @@ def export(ctx, id, output_path, test, export_type):
     - elif scan
     -- Get scan
     """
+    
+    # Check if we need to be on the VPN
+    if ctx.obj['vpn_required'] == True:
+        if lazyTools.ConnectedToVPN(ctx.parent.parent.params['config_path']):
+            # Connected to VPN
+            pass  # print('Connected to VPN')
+        else:
+            # Not connected to VPN
+            raise click.ClickException('Not connected to corporate VPN.')
+
     if ctx.obj['access_key'] and ctx.obj['secret_key']:
         folderIDDict = dict()
         scanIDDict = dict()
