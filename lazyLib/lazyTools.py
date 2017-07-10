@@ -31,8 +31,7 @@ def ConnectedToVPN(config_file: str) -> bool:
         # Parse Configuration File
         vpn_list = TOMLConfigImport(config_file)['VPN']['vpn_addresses']
     except KeyError:
-        print('[*] VPN addresses not found under VPN in list called \'vpn_addresses\'')
-        sys.exit(1)
+        raise VPNAddressListNotFound('[*] VPN addresses not found under VPN in list called \'vpn_addresses\'')
 
     try:
         return IPTools.ipInList(getPublicIP(), vpn_list)
@@ -104,15 +103,13 @@ class IPTools():
                 raise IPToolsExceptions.NotValidIP("'{}' is not a valid IP network or address".format(ip)) from None
 
 
-
-
-
 class IPToolsExceptions(Exception):
     class NotValidIP(Exception):
         """Exception raised when given string is not a valid IP network or address"""
     class NoValidIPs(Exception):
         """Exception raised when no IP address are present"""
-
+class VPNAddressListNotFound(Exception):
+    """Raised when list of addresses is not found in the config file."""
 class GetHTTPException(Exception):
     """Exception raised when status code other than 200 returned from website when attempting to get public IP"""
 class NotConnectedToVPN(Exception):
