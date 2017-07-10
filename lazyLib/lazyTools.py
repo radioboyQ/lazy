@@ -102,6 +102,39 @@ class IPTools():
             except ValueError:
                 raise IPToolsExceptions.NotValidIP("'{}' is not a valid IP network or address".format(ip)) from None
 
+    @staticmethod
+    def countNetworkRange(ip):
+        """
+        Count how many IPs are in a given network
+        :param ip: IP Network object
+        :return: Int of number of IPs in network
+        :rtype: int
+        """
+        try:
+            count = 1
+            for count, addr in enumerate(ip.hosts()):
+                pass
+            return count
+        except AttributeError:
+            return 1
+
+    @staticmethod
+    def networkToList(ip_addr):
+        """
+        Convert ipaddress.ip_network types to a list of valid addresses
+        :param ip_addr: ipaddress.IPv4Network or ipaddress.IPv6Network to be converted
+        :return: List of IP addresses
+        :rtype: list
+        """
+        network_list = list()
+        if isinstance(ip_addr, IPv4Network) or isinstance(ip_addr, IPv6Network):
+            for ip in ip_addr:
+                network_list.append(ip)
+            return network_list
+        else:
+            network_list.append(ip_addr)
+        return network_list
+
 
 class IPToolsExceptions(Exception):
     class NotValidIP(Exception):
