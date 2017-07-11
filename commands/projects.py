@@ -7,6 +7,11 @@ import sys
 import arrow
 import click
 from lxml import etree
+from tabulate import tabulate
+
+# My code
+from lazyLib import lazyTools
+from lazyLib import LazyCustomTypes
 
 __version__ = '2.1'
 
@@ -91,15 +96,39 @@ def nmap_parser(ctx, nmap_path):
 
 @cli.command(name='scope-check', short_help='Check if given IP is in scoping document.')
 @click.argument('scope-files', nargs=-1, type=click.Path(exists=True, file_okay=True, dir_okay=True, readable=True, resolve_path=True, allow_dash=True))
+@click.option('-u', '--unknown-ip', type=LazyCustomTypes.ipaddr, multiple=True, help='IP addresses which may be in scope.', required=True)
 @click.pass_context
-def scope_checker(ctx, scope_files):
-	"""
-	Check if a given IP is in the scoping file. These files can be CSV or XLSX
-	"""
+def scope_checker(ctx, scope_files, unknown_ip):
+    """
+    Check if a given IP is in the scoping file. These files can be CSV or XLSX
+    # TODO: Read scope from `xlsx` and `xls` files.
+    """
+    results = list()
+    results.append(['IP Address', 'PCI Compliant', 'Type'])
 
-	for file in scope_files:
-		if file.endswith('xlsx') or file.endswith('xls'):
-			
+    for file in scope_files:
+        if file.endswith('xlsx') or file.endswith('xls'):
+            raise click.BadParameter('XLXS files are not yet supported.', param_hint='scope-files')
+        elif file.endswith('csv'):
+            with open(file, 'r') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    try:
+                        # print(lazyTools.IPTools.checkIfIP(row['Range'].strip()))
+                        # Check if unknown IP is in the row
+                        for u_ip in unknown_ip:
+                            if u_ip in lazyTools.IPTools.checkIfIP(row['Range'].strip()):
+                                results.append([row['Range'], row['PCI Compliant'], row['Type']])
+
+                    except lazyTools.IPToolsExceptions.NotValidIP:
+                        click.secho('Invalid IP {} found. Continueing, but check it to ensure its supposted to be there.'.format(row['Range'].strip()))
+                    pass
+        else:
+            raise click.BadParameter('Unknown file extension. Use CSV or XLXS files.')
+
+    click.echo(tabulate(results, headers="firstrow"))
+
+
 
 
 
