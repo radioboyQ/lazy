@@ -10,7 +10,7 @@ from lazyLib import lazyTools
 from lazyLib import LazyCustomTypes
 
 
-__version__ = '0.1'
+__version__ = '0.2'
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
