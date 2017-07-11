@@ -1,6 +1,7 @@
 import csv
 import io
 import os
+from pprint import pprint
 import sys
 
 import arrow
@@ -86,6 +87,36 @@ def nmap_parser(ctx, nmap_path):
 
     else:
         raise click.BadOptionUsage('You can\'t use a folder just yet.', ctx=ctx)
+
+
+@cli.command(name='scope-check', short_help='Check if given IP is in scoping document.')
+@click.argument('scope-files', nargs=-1, type=click.Path(exists=True, file_okay=True, dir_okay=True, readable=True, resolve_path=True, allow_dash=True))
+@click.pass_context
+def scope_checker(ctx, scope_files):
+	"""
+	Check if a given IP is in the scoping file. These files can be CSV or XLSX
+	"""
+
+	for file in scope_files:
+		if file.endswith('xlsx') or file.endswith('xls'):
+			
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 if __name__ == '__main__':
     cli()
