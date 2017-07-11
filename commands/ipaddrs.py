@@ -1,5 +1,6 @@
 # Standard Library
 import ipaddress
+from pprint import pprint
 
 # Third Party Libraries
 import click
@@ -29,7 +30,7 @@ def subtract_IPs(ctx, parent_network, child_network):
     """
     Command to subtract two IP ranges from each other
     """
-    # ToDo: Output types. Various ways of exporting data, pretty for users, raw data for piping into another application, etc.
+    # TODO: Output types. Various ways of exporting data, pretty for users, raw data for piping into another application, etc.
     master_list = list()
     parent_network_list = list()
     child_network_list = list()
@@ -52,9 +53,10 @@ def subtract_IPs(ctx, parent_network, child_network):
                 # De-doup the IP list
                 child_network_list.append(single_ip)
 
-    for c_addr in child_network_list:
-        print(c_addr)
+    # for c_addr in child_network_list:
+    #     print(c_addr)
 
 
     for i in master_list:
         click.secho(i)
+
