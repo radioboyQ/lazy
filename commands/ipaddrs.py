@@ -59,4 +59,3 @@ def subtract_IPs(ctx, parent_network, child_network):
 
     for i in master_list:
         click.secho(i)
-
