@@ -66,6 +66,8 @@ def cli(ctx, target, port, name):
     else:
         ctx.obj['target'] = '{}:{}'.format(ctx.obj['target'], ctx.obj['port'])
 
+    # Set the VPN_Required flag to false
+    ctx.obj['vpn_required'] = False
 
 
 @cli.command(name='upload', context_settings=CONTEXT_SETTINGS, short_help='Upload a folder or series of Nessus files to a server.')
