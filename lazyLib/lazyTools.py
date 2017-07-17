@@ -56,7 +56,7 @@ def mount_changer(share_location):
 
 
 class IPTools():
-    """Class with IP address toosl"""
+    """Class with IP address tools"""
 
     @staticmethod
     def ipInList(unknown_ip, ip_list):
