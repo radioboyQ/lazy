@@ -53,11 +53,14 @@ def share(ctx, share_name, status):
             if share_status:
                 click.secho('[!] The shared drive is already mounted. Attempting to unmount it.', fg='white')
                 returnValue = lazyTools.mount_changer(configOptions['share'][share_name.lower()]['mount_point'])
-                if not returnValue[0]:
-                    click.secho(returnValue)
-                    click.secho('[!] {}'.format(returnValue[1]), fg='red')
-                elif returnValue[0]:
+                if returnValue[0] == True:
                     click.secho('[*] Share unmounted successfully.', fg='white')
+                else:
+                    # Share didn't unmount
+                    click.secho('[!] {}'.format(returnValue[1].strip()), fg='red')
+                    if returnValue[1].startswith('Unmount failed for'):
+                        # Advise the user to check for active sessions on the remote share
+                        click.secho('[*] Check for files that are open on the remote share. This also includes command prompts pointed to the remote file system.', fg='red')
             else:
                 click.secho('[*] Share not mounted', fg='white')
                 username = configOptions['share'][share_name.lower()]['username']
