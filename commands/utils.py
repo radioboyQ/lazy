@@ -1,8 +1,12 @@
 import os
 from pprint import pprint
 import sys
+import zipfile
 
+import boto3
 import click
+import arrow
+import click_spinner
 
 # My Junk
 from lazyLib import lazyTools
@@ -77,3 +81,31 @@ def share(ctx, share_name, status):
     else:
         raise click.BadParameter('The share name \'{}\' doesn\'t appear to exist. Check the config file and try again.'.format(ctx.params['share_name']))
 
+@cli.command('wiki-backup', help='Backup the local Doku Wiki to an Amazon S3 bucket.', context_settings=CONTEXT_SETTINGS)
+@click.pass_context
+def backup(ctx):
+    # Archive location
+    backup_path = '/Users/scottfraser/Sites/Backups/'
+    backup_filename = 'personalWiki_{date}.zip'.format(date=arrow.utcnow().to('local').format('YYYY-MM-DD'))
+    backup_full = os.path.join(backup_path, backup_filename)
+
+    # Data to archive
+    archive_data = '/Library/WebServer/Documents/dokuwiki/'
+
+    click.echo('[*] Compressing data from {} into {}'.format(archive_data, backup_full))
+    with click_spinner.spinner(beep=True):
+        with zipfile.ZipFile(backup_full, 'w') as zipf:
+            for root, dirs, files in os.walk(archive_data):
+                for file in files:
+                    zipf.write(os.path.join(root, file))
+
+    # Let's use Amazon S3
+    s3 = boto3.client('s3')
+
+    bucket_name = 'local-wiki'
+
+    click.echo('[*] Uploading {} to bucket {} now.'.format(backup_full, bucket_name))
+    with click_spinner.spinner(beep=True):
+        with open(backup_full, 'rb') as f:
+            s3.upload_fileobj(f, bucket_name, backup_filename)
+    click.echo('[!] Done! \n')
