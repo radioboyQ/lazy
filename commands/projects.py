@@ -24,7 +24,7 @@ def cli(ctx):
 @cli.command(name='report-name', help='Generate proper report names. ')
 @click.option('-s', '--client-short', help='Client three letter abbreviation.', type=click.STRING, required=True)
 @click.option('-u', '--user-initials', help='User\'s three initials', type=click.STRING, default='SAF')
-@click.option('-t', '--report-type', help='The type of report to create')
+@click.option('-t', '--report-type', help='The type of report to create', required=True)
 @click.pass_context
 def report_name(ctx, client_short, user_initials, report_type):
     """
@@ -35,7 +35,7 @@ def report_name(ctx, client_short, user_initials, report_type):
     utc = arrow.utcnow()
 
     if report_type.upper() == 'WSR':
-        click.secho('{client_short}_WSR_{date}.docx'.format(client_short=client_short.upper(), report_type=report_type.upper(), date=arrow.utcnow().to('local').format('YYYY-MM-DD')))
+        click.secho('{client_short}_{report_type}_{date}_Project_Status_Report.docx'.format(client_short=client_short.upper(), report_type=report_type.upper(), date=arrow.utcnow().to('local').format('YYYY-MM-DD')))
     else:
         click.secho('{client_short}_{report_type}_{date}_{user_initials}_v0.1.docx'.format(client_short=client_short.upper(), report_type=report_type.upper(), date=arrow.utcnow().to('local').format('YYYY-MM-DD'), user_initials=user_initials))
 
