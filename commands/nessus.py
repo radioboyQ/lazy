@@ -141,7 +141,7 @@ def upload(ctx, local_nessus, remote_folder, test):
             click.secho('[*] All done!', fg='green')
 
 
-@cli.command(name='export', short_help='Export a scan or folder of scans from a Nessus server.')
+@cli.command(name='download', short_help='Export a scan or folder of scans from a Nessus server.')
 @click.option('-i', '--id', required=True, type=click.INT, help='ID of the scan or folder on the Nessus server.')
 @click.option('-o', '--output-path', type=click.Path(exists=False, file_okay=True, dir_okay=True, resolve_path=True, writable=True), help='Location and/or name to save the scan', envvar='PWD')
 @click.option('-eT', '--export-type', help='Define the exported file\'s type.', type=click.Choice(['nessus', 'pdf', 'html', 'csv']), default='nessus')
@@ -149,7 +149,7 @@ def upload(ctx, local_nessus, remote_folder, test):
 @click.pass_context
 def export(ctx, id, output_path, test, export_type):
     """
-    Export Nessus scans from a file or folder on a remote server
+    Download Nessus scans from a file or folder on a remote server
     - Get user credentials - API or username and password
     - Determine if remote Nessus target is folder or a scan
     - If folder:
