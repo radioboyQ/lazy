@@ -37,37 +37,44 @@ def cli(ctx, target, port, name):
     """
     configOptions = lazyTools.TOMLConfigImport(ctx.parent.params['config_path'])
 
-    if name in configOptions['nessus']:
-        # Name given exists, grab hostname, port, access_key, secret_key and determine if VPN is required
-        target = configOptions['nessus'][name]['Hostname']
-        port = configOptions['nessus'][name]['Port']
-        access_key = configOptions['nessus'][name]['access_key']
-        secret_key = configOptions['nessus'][name]['secret_key']
-        vpn_required = configOptions['nessus'][name]['VPN_Required']
+    if ctx.invoked_subcommand not in ['upload', 'download']:
+        # Skip checks for everything except uploading and downloading
 
-        ctx.obj = {'target': target, 'port': port, 'access_key': access_key, 'secret_key': secret_key, 'vpn_required': vpn_required}
-
+        # Set the VPN_Required flag to false
+        ctx.obj['vpn_required'] = False
+        
     else:
-        if target is None:
-            target = click.prompt('[?] What is the hostname or IP of the Nessus server', prompt_suffix='? ')
-        if port is None:
-            port = click.prompt('[?] What port is the Nessus server accessable on', prompt_suffix='? ', type=LazyCustomTypes.port)
+        if name in configOptions['nessus']:
+            # Name given exists, grab hostname, port, access_key, secret_key and determine if VPN is required
+            target = configOptions['nessus'][name]['Hostname']
+            port = configOptions['nessus'][name]['Port']
+            access_key = configOptions['nessus'][name]['access_key']
+            secret_key = configOptions['nessus'][name]['secret_key']
+            vpn_required = configOptions['nessus'][name]['VPN_Required']
 
-        username = click.prompt('[?] What is your username for Nessus', prompt_suffix='? ')
-        password = click.prompt('[?] What is your password for Nessus', prompt_suffix='? ', hide_input=True)
+            ctx.obj = {'target': target, 'port': port, 'access_key': access_key, 'secret_key': secret_key, 'vpn_required': vpn_required}
 
-        ctx.obj = {'target': target, 'port': port, 'username': username, 'password': password}
+        else:
+            if target is None:
+                target = click.prompt('[?] What is the hostname or IP of the Nessus server', prompt_suffix='? ')
+            if port is None:
+                port = click.prompt('[?] What port is the Nessus server accessable on', prompt_suffix='? ', type=LazyCustomTypes.port)
 
-    if not ctx.obj['target'].startswith('https://'):
-        ctx.obj['target'] = 'https://{}'.format(ctx.obj['target'])
+            username = click.prompt('[?] What is your username for Nessus', prompt_suffix='? ')
+            password = click.prompt('[?] What is your password for Nessus', prompt_suffix='? ', hide_input=True)
 
-    if ctx.obj['target'].endswith('/'):
-        ctx.obj['target'] = ctx.obj['target'].replace('/', ':{}'.format(ctx.obj['port']))
-    else:
-        ctx.obj['target'] = '{}:{}'.format(ctx.obj['target'], ctx.obj['port'])
+            ctx.obj = {'target': target, 'port': port, 'username': username, 'password': password}
 
-    # Set the VPN_Required flag to false
-    ctx.obj['vpn_required'] = False
+        if not ctx.obj['target'].startswith('https://'):
+            ctx.obj['target'] = 'https://{}'.format(ctx.obj['target'])
+
+        if ctx.obj['target'].endswith('/'):
+            ctx.obj['target'] = ctx.obj['target'].replace('/', ':{}'.format(ctx.obj['port']))
+        else:
+            ctx.obj['target'] = '{}:{}'.format(ctx.obj['target'], ctx.obj['port'])
+
+        # Set the VPN_Required flag to false
+        ctx.obj['vpn_required'] = False
 
 
 @cli.command(name='upload', context_settings=CONTEXT_SETTINGS, short_help='Upload a folder or series of Nessus files to a server.')
@@ -210,4 +217,6 @@ def export(ctx, id, output_path, test, export_type):
                     click.secho('[*] Saved {}.{} to disk.'.format(scans['name'], export_type))
         else:
             raise click.BadParameter('{} is not a valid scan or folder number'.format(id))
+
+
 
