@@ -8,6 +8,7 @@ import sys
 
 # 3rd Party Libs
 import click
+from lxml import etree
 # from tabulate import tabulate
 
 # My Junk
@@ -40,9 +41,8 @@ def cli(ctx, target, port, name):
     if ctx.invoked_subcommand not in ['upload', 'download']:
         # Skip checks for everything except uploading and downloading
 
-        # Set the VPN_Required flag to false
-        ctx.obj['vpn_required'] = False
-        
+        pass
+
     else:
         if name in configOptions['nessus']:
             # Name given exists, grab hostname, port, access_key, secret_key and determine if VPN is required
@@ -218,5 +218,52 @@ def export(ctx, id, output_path, test, export_type):
         else:
             raise click.BadParameter('{} is not a valid scan or folder number'.format(id))
 
+@cli.command(name='ssl_hosts', short_help='Display all the hosts and ports with a valid SSL/TLS cert.')
+@click.argument('nessus_files', nargs=-1, type=click.Path(exists=True, file_okay=True, dir_okay=True, resolve_path=True,readable=True))
+@click.pass_context
+def sslhosts(ctx, nessus_files):
+    """
+    Display all the hosts and their ports with valid SSL/TLS certs.
+    """
 
+    outlist = list()
 
+    nessus_list = list()
+
+    for entry in nessus_files:
+        if os.path.isfile(entry):
+            if entry.split('.')[-1:][0] == 'nessus':
+                nessus_list.append(os.path.split(entry))
+        elif os.path.isdir(entry):
+            for (dirpath, dirnames, filenames) in walk(entry):
+                for fn in filenames:
+                    if fn.split('.')[-1:][0] == 'nessus':
+                        nessus_list.append((dirpath, fn))
+
+    # Make sure we actually found a Nessus file to upload
+    if len(nessus_list) == 0:
+        click.secho('[!] No Nessus files were specified.', fg='red')
+        click.secho('[*] Exiting.', fg='green')
+        sys.exit()
+
+    for file in nessus_list:
+        nessus_file_path = os.path.join(file[0], file[1])
+        if os.path.isfile(nessus_file_path):
+            tree = etree.parse(nessus_file_path)
+
+            root = tree.getroot()
+
+            for i in root.xpath('./Report/ReportHost/ReportItem'):
+                if i.attrib['pluginID'] == '10863':
+                    for h in i.xpath('..'):
+                        hostname = h.attrib['name']
+
+                    port = i.attrib['port']
+
+                    final_str = '{}:{}'.format(hostname, port)
+
+                    if final_str not in outlist:
+                        outlist.append(final_str)
+
+    for host_port in outlist:
+        click.echo(host_port)
