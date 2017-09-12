@@ -220,8 +220,9 @@ def export(ctx, id, output_path, test, export_type):
 
 @cli.command(name='ssl_hosts', short_help='Display all the hosts and ports with a valid SSL/TLS cert.')
 @click.argument('nessus_files', nargs=-1, type=click.Path(exists=True, file_okay=True, dir_okay=True, resolve_path=True,readable=True))
+@click.option('-p', '--plugin-id', help='Plugin ID to export hostname and ports for. Default plugin: \'SSL Certificate Information\' : 10863', type=click.STRING, default='10863')
 @click.pass_context
-def sslhosts(ctx, nessus_files):
+def sslhosts(ctx, nessus_files, plugin_id):
     """
     Display all the hosts and their ports with valid SSL/TLS certs.
     """
@@ -229,6 +230,7 @@ def sslhosts(ctx, nessus_files):
     outlist = list()
 
     nessus_list = list()
+
 
     for entry in nessus_files:
         if os.path.isfile(entry):
@@ -254,7 +256,7 @@ def sslhosts(ctx, nessus_files):
             root = tree.getroot()
 
             for i in root.xpath('./Report/ReportHost/ReportItem'):
-                if i.attrib['pluginID'] == '10863':
+                if i.attrib['pluginID'] == plugin_id:
                     for h in i.xpath('..'):
                         hostname = h.attrib['name']
 
