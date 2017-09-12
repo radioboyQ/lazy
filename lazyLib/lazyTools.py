@@ -1,5 +1,6 @@
 # Standard Library
 from ipaddress import IPv4Address, IPv6Address, IPv4Network, IPv6Network, ip_address, ip_network
+import os
 import subprocess
 import sys
 
@@ -10,6 +11,23 @@ import toml
 
 __version__ = '1.1'
 
+def file_exist(path_in):
+    """
+    Check if path exists
+    :param path_in: Does this file exist
+    :return: True for exist; False for does not exist
+    :rtype: bool
+    """
+    return os.path.isfile(path_in)
+
+def dir_exists(path_in):
+    """
+    Check if directory exists
+    :param path_in: Does this file exist
+    :return: True for exist; False for does not exist
+    :rtype: bool
+    """
+    return os.path.isdir(path_in)
 
 def TOMLConfigImport(filename):
     """Parse a TOML configuration file"""
