@@ -2,12 +2,16 @@ import csv
 import io
 import os
 import sys
+import subprocess
 
 import arrow
 import click
 from lxml import etree
 
-__version__ = '2.1'
+# My Junk
+from lazyLib import lazyTools
+
+__version__ = '2.2'
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
@@ -86,6 +90,60 @@ def nmap_parser(ctx, nmap_path):
 
     else:
         raise click.BadOptionUsage('You can\'t use a folder just yet.', ctx=ctx)
+
+@cli.command(name='upload', context_settings=CONTEXT_SETTINGS, short_help='Upload/Push a project directory to QNAP')
+@click.argument('projects', type=click.STRING, nargs=-1)
+@click.option('-s', '--share-name', help='Name of the share from the config file.', default='QNAP', type=click.STRING)
+@click.option('-y', '--year', type=click.IntRange(2013, 2100), default=arrow.now().format('YYYY'), help='Pick a year after 2013. Default is the current year.')
+
+@click.pass_context
+def upload_qnap(ctx, projects, year, share_name):
+    """
+    Upload project directories to QNAP
+    - Check that the local *dir* exists
+    - Check if QNAP is mounted
+    - Copy local dir to QNAP folder
+    """
+    configOptions = lazyTools.TOMLConfigImport(ctx.parent.parent.params['config_path'])
+
+    remotePath = '/Volumes/ProServices/Projects/{year}/'.format(year=year)
+
+    sync_push_cmd = ["rsync", "-zarvhuW"]
+
+    for proj in projects:
+
+        fullPath = os.path.join(configOptions['local-config']['projects-folder'], proj)
+
+        if lazyTools.dir_exists(fullPath):
+            # Path exists locally
+
+            # Check if the share is mounted
+            share_status = os.path.ismount(configOptions['share'][share_name.lower()]['mount_point'])
+
+            if share_status == False:
+                click.secho('[!] The share isn\'t mounted. Mount it and try again.', fg='red')
+                sys.exit(1)
+
+            sync_push_cmd.append('fullPath')
+
+            try:
+                p = subprocess.Popen(sync_push_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                for lines in iter(p.stdout.readline, b''):
+                    for line in lines.split('\r'):
+                        print("[s] %s" % line.strip())
+            except Exception as e:
+                    click.secho('[!] Failed to upload.', fg='red')
+                    print(e)
+            finally:
+                click.secho('[*] Upload success.', fg='green')
+                
+        else:
+            raise click.BadArgumentUsage('The project folder {} doesn\'t exist!'.format(proj))
+
+
+
+
+
 
 if __name__ == '__main__':
     cli()
