@@ -3,10 +3,11 @@ from pprint import pprint
 import sys
 import zipfile
 
+import arrow
 import boto3
 import click
-import arrow
 import click_spinner
+from lifxlan import LifxLAN
 
 # My Junk
 from lazyLib import lazyTools
@@ -109,3 +110,29 @@ def backup(ctx):
         with open(backup_full, 'rb') as f:
             s3.upload_fileobj(f, bucket_name, backup_filename)
     click.echo('[!] Done! \n')
+
+@cli.command('lights-out', help='Turns off all Lifx bulbs on the local network.')
+@click.pass_context
+def lights_out(ctx):
+    """
+    Turns off all Lifx bulbs on the local network.
+    """
+    
+    num_lights = None
+
+    with click_spinner.spinner():
+        lifx = LifxLAN(num_lights, verbose=False)
+
+    # get devices
+    devices = lifx.get_lights()
+    labels = []
+    for device in devices:
+        # pprint(vars(device))
+        labels.append({'label': device.get_label(), 'ip_addr': device.get_ip_addr()})
+
+    if ctx.parent.parent.params['verbose'] == True:
+        click.echo("Found Bulbs:")
+        for label in labels:
+            print('[-] Label: {}\n[->] IP Address: {}'.format(label['label'], label['ip_addr']))
+
+    lifx.set_power_all_lights("off", rapid=True)
