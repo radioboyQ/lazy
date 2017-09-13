@@ -104,6 +104,8 @@ def upload_qnap(ctx, projects, year, share_name):
     - Check if QNAP is mounted
     - Copy local dir to QNAP folder
     """
+    # ToDo: Add functionality to only upload Deliverables, Evidence, Administrative, or Retest
+
     configOptions = lazyTools.TOMLConfigImport(ctx.parent.parent.params['config_path'])
 
     remotePath = '/Volumes/ProServices/Projects/{year}/'.format(year=year)
