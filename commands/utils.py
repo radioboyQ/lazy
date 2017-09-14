@@ -7,7 +7,7 @@ import arrow
 import boto3
 import click
 import click_spinner
-from lifxlan import LifxLAN
+from lifxlan import LifxLAN, WARM_WHITE, PINK
 
 # My Junk
 from lazyLib import lazyTools
@@ -111,17 +111,23 @@ def backup(ctx):
             s3.upload_fileobj(f, bucket_name, backup_filename)
     click.echo('[!] Done! \n')
 
-@cli.command('lights-out', help='Turns off all Lifx bulbs on the local network.')
+@cli.group('lights', help='Base command for the controlling the lights.', context_settings=CONTEXT_SETTINGS)
+@click.pass_context
+def lights(ctx):
+    """
+    Base command for controlling the lights
+    """
+
+@lights.command('out', help='Turns off all Lifx bulbs on the local network.')
 @click.pass_context
 def lights_out(ctx):
     """
     Turns off all Lifx bulbs on the local network.
     """
-    
+
     num_lights = None
 
-    with click_spinner.spinner():
-        lifx = LifxLAN(num_lights, verbose=False)
+    lifx = LifxLAN(num_lights, verbose=False)
 
     # get devices
     devices = lifx.get_lights()
@@ -136,3 +142,39 @@ def lights_out(ctx):
             print('[-] Label: {}\n[->] IP Address: {}'.format(label['label'], label['ip_addr']))
 
     lifx.set_power_all_lights("off", rapid=True)
+
+@lights.command('normal', help='Sets the bulbs to a normal color.')
+@click.pass_context
+def normal(ctx):
+    """
+    Set all the lights to normal
+    """
+
+    num_lights = None
+
+    lifx = LifxLAN(num_lights, verbose=False)
+
+    # get devices
+    devices = lifx.get_lights()
+
+    for device in devices:
+        # Set color
+        device.set_color(WARM_WHITE, rapid=True)
+
+@lights.command('pink', help='Sets the bulbs to pink.')
+@click.pass_context
+def normal(ctx):
+    """
+    Set all the lights to pink
+    """
+
+    num_lights = None
+
+    lifx = LifxLAN(num_lights, verbose=False)
+
+    # get devices
+    devices = lifx.get_lights()
+
+    for device in devices:
+        # Set color
+        device.set_color(PINK, rapid=True)
