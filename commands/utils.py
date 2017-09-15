@@ -136,7 +136,7 @@ def lights_out(ctx):
         # pprint(vars(device))
         labels.append({'label': device.get_label(), 'ip_addr': device.get_ip_addr()})
 
-    if ctx.parent.parent.params['verbose'] == True:
+    if ctx.parent.parent.parent.params['verbose'] == True:
         click.echo("Found Bulbs:")
         for label in labels:
             print('[-] Label: {}\n[->] IP Address: {}'.format(label['label'], label['ip_addr']))
