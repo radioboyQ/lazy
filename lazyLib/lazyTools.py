@@ -36,7 +36,7 @@ def TOMLConfigImport(filename):
 
     return config
 
-def getPublicIP(url='https://icanhazip.com'):
+def getPublicIP(url='https://ipv4.icanhazip.com'):
     resp = requests.get(url)
     if resp.status_code != 200:
         err_str = "{} returned status code {}".format(url, resp.status_code)
