@@ -32,7 +32,7 @@ def cli(ctx, nessus_files, plugin_id):
                     if fn.split('.')[-1:][0] == 'nessus':
                         nessus_list.append((dirpath, fn))
 
-    # Make sure we actually found a Nessus file to upload
+    # Make sure we actually found a Nessus file to play with
     if len(nessus_list) == 0:
         click.secho('[!] No Nessus files were specified.', fg='red')
         click.secho('[*] Exiting.', fg='green')
