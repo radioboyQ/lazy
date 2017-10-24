@@ -21,68 +21,22 @@ __version__ = '1.0'
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 @click.group(name='nessus', context_settings=CONTEXT_SETTINGS, invoke_without_command=False, short_help='Tools that are useful for interacting with a Nessus scanner.')
-@click.option('-t', '--target', type=click.STRING, help='Server to upload Nessus file. This should be an IP address or hostanme.')
-@click.option('-p', '--port', type=LazyCustomTypes.port, default='8834', help='Port number Nessus server can be accessed on.')
-@click.option('-n', '--name', help='Name of a configuration section', default='dc2astns02')
 @click.pass_context
-def cli(ctx, target, port, name):
+def cli(ctx):
     """
-    Parent command to provide options for each child command.
-
-    FUTURE:
-        ID system to just use `--name str` to call all settings from a config file.
-    :param target: URL or IP of Nessus server
-    :type target: str
-    :param port: Port number of Nessus server
-    :type port: int
+    Parent Nessus command to provide options for each child command.
     """
-    configOptions = lazyTools.TOMLConfigImport(ctx.parent.params['config_path'])
-
-    if ctx.invoked_subcommand not in ['upload', 'download']:
-        # Skip checks for everything except uploading and downloading
-
-        pass
-
-    else:
-        if name in configOptions['nessus']:
-            # Name given exists, grab hostname, port, access_key, secret_key and determine if VPN is required
-            target = configOptions['nessus'][name]['Hostname']
-            port = configOptions['nessus'][name]['Port']
-            access_key = configOptions['nessus'][name]['access_key']
-            secret_key = configOptions['nessus'][name]['secret_key']
-            vpn_required = configOptions['nessus'][name]['VPN_Required']
-
-            ctx.obj = {'target': target, 'port': port, 'access_key': access_key, 'secret_key': secret_key, 'vpn_required': vpn_required}
-
-        else:
-            if target is None:
-                target = click.prompt('[?] What is the hostname or IP of the Nessus server', prompt_suffix='? ')
-            if port is None:
-                port = click.prompt('[?] What port is the Nessus server accessable on', prompt_suffix='? ', type=LazyCustomTypes.port)
-
-            username = click.prompt('[?] What is your username for Nessus', prompt_suffix='? ')
-            password = click.prompt('[?] What is your password for Nessus', prompt_suffix='? ', hide_input=True)
-
-            ctx.obj = {'target': target, 'port': port, 'username': username, 'password': password}
-
-        if not ctx.obj['target'].startswith('https://'):
-            ctx.obj['target'] = 'https://{}'.format(ctx.obj['target'])
-
-        if ctx.obj['target'].endswith('/'):
-            ctx.obj['target'] = ctx.obj['target'].replace('/', ':{}'.format(ctx.obj['port']))
-        else:
-            ctx.obj['target'] = '{}:{}'.format(ctx.obj['target'], ctx.obj['port'])
-
-        # Set the VPN_Required flag to false
-        ctx.obj['vpn_required'] = False
 
 
 @cli.command(name='upload', context_settings=CONTEXT_SETTINGS, short_help='Upload a folder or series of Nessus files to a server.')
 @click.option('-l', '--local-nessus', required=True, type=click.Path(exists=False, file_okay=True, dir_okay=True, readable=True, resolve_path=True), help='Path to local Nessus file(s).')
 @click.option('-r', '--remote-folder', type=click.INT, help='Destination folder ID on Nessus server.', required=True)
 @click.option('--test', is_flag=True, default=False, help='Test authentication to Nessus server.')
+@click.option('-t', '--target', type=click.STRING, help='Server to upload Nessus file. This should be an IP address or hostanme.')
+@click.option('-p', '--port', type=LazyCustomTypes.port, default='8834', help='Port number Nessus server can be accessed on.')
+@click.option('-n', '--name', help='Name of a configuration section', default='dc2astns02')
 @click.pass_context
-def upload(ctx, local_nessus, remote_folder, test):
+def upload(ctx, local_nessus, remote_folder, test, target, port, name):
     """
     Upload lots of Nessus files to a folder in a Nessus Server.
     - Get user credentials - API or username and password
@@ -90,6 +44,10 @@ def upload(ctx, local_nessus, remote_folder, test):
     -- Find all '.nessus' files in directory
     - Upload Nessus file to given folder
     """
+
+    # Check server information
+    ctx, target, port, name = lazyTools.checkNessusServerConfig(ctx, target, port, name)
+
 
     # If local-nessus is a file, skip OS walk and trying to find more Nessus files
     nessus_list = list()
@@ -153,8 +111,11 @@ def upload(ctx, local_nessus, remote_folder, test):
 @click.option('-o', '--output-path', type=click.Path(exists=False, file_okay=True, dir_okay=True, resolve_path=True, writable=True), help='Location and/or name to save the scan', envvar='PWD')
 @click.option('-eT', '--export-type', help='Define the exported file\'s type.', type=click.Choice(['nessus', 'pdf', 'html', 'csv']), default='nessus')
 @click.option('--test', is_flag=True, default=False, help='Test authentication to Nessus server.')
+@click.option('-t', '--target', type=click.STRING, help='Server to upload Nessus file. This should be an IP address or hostanme.')
+@click.option('-p', '--port', type=LazyCustomTypes.port, default='8834', help='Port number Nessus server can be accessed on.')
+@click.option('-n', '--name', help='Name of a configuration section', default='dc2astns02')
 @click.pass_context
-def export(ctx, id, output_path, test, export_type):
+def export(ctx, id, output_path, test, export_type, target, port, name):
     """
     Download Nessus scans from a file or folder on a remote server
     - Get user credentials - API or username and password
@@ -165,7 +126,10 @@ def export(ctx, id, output_path, test, export_type):
     - elif scan
     -- Get scan
     """
-    
+
+    # Check server information
+    ctx, target, port, name = lazyTools.checkNessusServerConfig(ctx, target, port, name)
+
     # Check if we need to be on the VPN
     if ctx.obj['vpn_required'] == True:
         if lazyTools.ConnectedToVPN(ctx.parent.parent.params['config_path']):

@@ -4,8 +4,12 @@ import os
 import subprocess
 import sys
 
+# LazyLib Tools
+from . import LazyCustomTypes
+
 
 # 3rd Party Libs
+import click
 import requests
 import toml
 
@@ -152,6 +156,50 @@ class IPTools():
         else:
             network_list.append(ip_addr)
         return network_list
+
+
+def checkNessusServerConfig(ctx, target, port, name):
+    """
+    Check that the provided configuration checks out
+
+    ### THIS FUNCTION REQUESTS INFORMATION FROM THE USER ###
+    """
+    configOptions = TOMLConfigImport(ctx.parent.parent.params['config_path'])
+    if name in configOptions['nessus']:
+        # Name given exists, grab hostname, port, access_key, secret_key and determine if VPN is required
+        target = configOptions['nessus'][name]['Hostname']
+        port = configOptions['nessus'][name]['Port']
+        access_key = configOptions['nessus'][name]['access_key']
+        secret_key = configOptions['nessus'][name]['secret_key']
+        vpn_required = configOptions['nessus'][name]['VPN_Required']
+
+        ctx.obj = {'target': target, 'port': port, 'access_key': access_key, 'secret_key': secret_key,
+                   'vpn_required': vpn_required}
+
+    else:
+        if target is None:
+            target = click.prompt('[?] What is the hostname or IP of the Nessus server', prompt_suffix='? ')
+        if port is None:
+            port = click.prompt('[?] What port is the Nessus server accessable on', prompt_suffix='? ',
+                                type=LazyCustomTypes.port)
+
+        username = click.prompt('[?] What is your username for Nessus', prompt_suffix='? ')
+        password = click.prompt('[?] What is your password for Nessus', prompt_suffix='? ', hide_input=True)
+
+        ctx.obj = {'target': target, 'port': port, 'username': username, 'password': password}
+
+    if not ctx.obj['target'].startswith('https://'):
+        ctx.obj['target'] = 'https://{}'.format(ctx.obj['target'])
+
+    if ctx.obj['target'].endswith('/'):
+        ctx.obj['target'] = ctx.obj['target'].replace('/', ':{}'.format(ctx.obj['port']))
+    else:
+        ctx.obj['target'] = '{}:{}'.format(ctx.obj['target'], ctx.obj['port'])
+
+    # Set the VPN_Required flag to false
+    ctx.obj['vpn_required'] = False
+
+    return ctx, target, port, name
 
 
 class IPToolsExceptions(Exception):
