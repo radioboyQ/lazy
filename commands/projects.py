@@ -1,17 +1,41 @@
+import asyncio
 import csv
 import io
 import os
+from pprint import pprint
 import sys
 import subprocess
 
 import arrow
+import asyncssh
 import click
 from lxml import etree
 
 # My Junk
 from lazyLib import lazyTools
 
-__version__ = '2.2'
+__version__ = '2.5'
+
+async def run_client(host, uname, command_list):
+    """
+     Run commands on remote host after connection
+    """
+    result_dict = dict()
+    async with asyncssh.connect(host, username=uname) as conn:
+        for c in command_list:
+            result = await(conn.run(c))
+            if host in result_dict:
+                # Get list and update
+                result_list = result_dict[host]
+                result_list.append([c, result.stdout, result.stderr])
+                result_dict.update({host: result_list})
+            else:
+                # Add host
+                result_dict.update({host: {c: {'stdout': result.stdout, 'stderr': result.stderr}}})
+        return result_dict
+
+
+
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
@@ -142,6 +166,34 @@ def upload_qnap(ctx, projects, year, share_name):
             raise click.BadArgumentUsage('The project folder {} doesn\'t exist!'.format(proj))
 
 
+@cli.command(name='test-setup', help='Sets up remote host for a pentest.')
+@click.argument('host', type=click.STRING)
+@click.option('-p', '--port', help='Port number to access jump box.', type=click.IntRange(1, 655535), default=2222)
+@click.option('-u', '--username', help='Username to log in.', type=click.STRING, default='root')
+@click.option('-c', '--cert', help='Cert to use for the connection.', type=click.Path(exists=True, file_okay=True, dir_okay=False, resolve_path=True, allow_dash=True))
+@click.argument('cmd-file', type=click.Path(exists=True, dir_okay=False, resolve_path=True))
+@click.pass_context
+def test_setup(ctx, host, port, username, cert, cmd_file):
+    """
+    Set up a jump box for an upcoming pen test.
+    """
+    cmd_list = list()
+
+    with open(cmd_file, 'r') as f:
+        for l in f:
+            cmd_list.append(l.strip())
+
+    try:
+        result_dict = asyncio.get_event_loop().run_until_complete(run_client(host, username, cmd_list))
+    except (OSError, asyncssh.Error) as exc:
+        sys.exit('SSH connection failed: ' + str(exc))
+
+    for host in result_dict:
+        for cmd in result_dict[host]:
+            click.echo('Standard Out for {}: \n{}'.format(cmd, result_dict[host][cmd]['stdout']))
+            click.echo(75*'-')
+            click.echo('\n')
+            click.echo('Standard Error for {}: \n{}'.format(cmd, result_dict[host][cmd]['stderr']))
 
 
 
