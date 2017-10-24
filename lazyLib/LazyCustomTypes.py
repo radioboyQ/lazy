@@ -3,8 +3,8 @@
 import click
 
 # My tools
-from .lazyTools import IPTools
-from .lazyTools import IPToolsExceptions
+from .lazyTools import *
+from .lazyTools import *
 
 
 class PortIntParamType(click.ParamType):
