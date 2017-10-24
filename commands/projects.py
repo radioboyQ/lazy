@@ -95,7 +95,6 @@ def nmap_parser(ctx, nmap_path):
 @click.argument('projects', type=click.STRING, nargs=-1)
 @click.option('-s', '--share-name', help='Name of the share from the config file.', default='QNAP', type=click.STRING)
 @click.option('-y', '--year', type=click.IntRange(2013, 2100), default=arrow.now().format('YYYY'), help='Pick a year after 2013. Default is the current year.')
-
 @click.pass_context
 def upload_qnap(ctx, projects, year, share_name):
     """
