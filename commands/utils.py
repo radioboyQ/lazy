@@ -93,7 +93,7 @@ def backup(ctx):
     archive_data = '/Library/WebServer/Documents/dokuwiki/'
 
     click.echo('[*] Compressing data from {} into {}'.format(archive_data, backup_full))
-    with click_spinner.spinner(beep=True):
+    with click_spinner.spinner(beep=False):
         with zipfile.ZipFile(backup_full, 'w') as zipf:
             for root, dirs, files in os.walk(archive_data):
                 for file in files:
@@ -105,7 +105,7 @@ def backup(ctx):
     bucket_name = 'local-wiki'
 
     click.echo('[*] Uploading {} to bucket {} now.'.format(backup_full, bucket_name))
-    with click_spinner.spinner(beep=True):
+    with click_spinner.spinner(beep=False):
         with open(backup_full, 'rb') as f:
             s3.upload_fileobj(f, bucket_name, backup_filename)
     click.echo('[!] Done! \n')
