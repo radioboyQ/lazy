@@ -83,3 +83,4 @@ def restart_odoo(ctx, server, cmd, username):
             print(i)
 
     click.echo(75 * '-')
+    
