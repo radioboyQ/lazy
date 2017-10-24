@@ -218,13 +218,13 @@ def export(ctx, id, output_path, test, export_type):
         else:
             raise click.BadParameter('{} is not a valid scan or folder number'.format(id))
 
-@cli.command(name='ssl_hosts', short_help='Display all the hosts and ports with a valid SSL/TLS cert.')
+@cli.command(name='sslippycup', short_help='Display all the hosts and ports with a valid SSL/TLS cert.')
 @click.argument('nessus_files', nargs=-1, type=click.Path(exists=True, file_okay=True, dir_okay=True, resolve_path=True,readable=True))
 @click.option('-p', '--plugin-id', help='Plugin ID to export hostname and ports for. Default plugin: \'SSL Certificate Information\' : 10863', type=click.STRING, default='10863')
 @click.pass_context
-def sslhosts(ctx, nessus_files, plugin_id):
+def sslippycup(ctx, nessus_files, plugin_id):
     """
-    Display all the hosts and their ports with valid SSL/TLS certs.
+    Display all the hosts and their ports associated to the given Nessus plugin ID.
     """
 
     outlist = list()
@@ -242,7 +242,7 @@ def sslhosts(ctx, nessus_files, plugin_id):
                     if fn.split('.')[-1:][0] == 'nessus':
                         nessus_list.append((dirpath, fn))
 
-    # Make sure we actually found a Nessus file to upload
+    # Make sure we actually found a Nessus file to play with
     if len(nessus_list) == 0:
         click.secho('[!] No Nessus files were specified.', fg='red')
         click.secho('[*] Exiting.', fg='green')
