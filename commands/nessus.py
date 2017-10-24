@@ -215,21 +215,26 @@ def sslippycup(ctx, nessus_files, plugin_id):
     for file in nessus_list:
         nessus_file_path = os.path.join(file[0], file[1])
         if os.path.isfile(nessus_file_path):
-            tree = etree.parse(nessus_file_path)
+            try:
+                tree = etree.parse(nessus_file_path)
 
-            root = tree.getroot()
+                root = tree.getroot()
 
-            for i in root.xpath('./Report/ReportHost/ReportItem'):
-                if i.attrib['pluginID'] == plugin_id:
-                    for h in i.xpath('..'):
-                        hostname = h.attrib['name']
+                for i in root.xpath('./Report/ReportHost/ReportItem'):
+                    if i.attrib['pluginID'] == plugin_id:
+                        for h in i.xpath('..'):
+                            hostname = h.attrib['name']
 
-                    port = i.attrib['port']
+                        port = i.attrib['port']
 
-                    final_str = '{}:{}'.format(hostname, port)
+                        final_str = '{}:{}'.format(hostname, port)
 
-                    if final_str not in outlist:
-                        outlist.append(final_str)
+                        if final_str not in outlist:
+                            outlist.append(final_str)
+            except:
+                click.echo('An error occured, are you sure that you\'ve got a Nessus file?')
+                click.echo(sys.exc_info()[0])
+                sys.exit(1)
 
     for host_port in outlist:
         click.echo(host_port)
