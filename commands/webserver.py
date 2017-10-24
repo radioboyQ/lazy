@@ -9,10 +9,10 @@ from aiohttp import web
 from lazyLib import lazyTools
 
 
-
 __version__ = '1.0'
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+
 
 @click.group(name='webserver', short_help='Serve up a nice directory index from a given point.', context_settings=CONTEXT_SETTINGS, cls=lazyTools.AliasedGroup, invoke_without_command=True)
 @click.option('-d', '--directory', help='Directory to serve from, defaults to current working directory.', default=os.getcwd(), type=click.Path(exists=True, file_okay=False, dir_okay=True, readable=True, resolve_path=True, allow_dash=True))
