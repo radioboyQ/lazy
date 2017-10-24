@@ -6,7 +6,7 @@ __version__ = '1.0'
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
-@click.group('lights', help='Base command for the controlling the lights.', context_settings=CONTEXT_SETTINGS)
+@click.group('lights', help='Base command for the controlling the lights.', context_settings=CONTEXT_SETTINGS, cls=lazyTools.AliasedGroup)
 @click.pass_context
 def cli(ctx):
     """

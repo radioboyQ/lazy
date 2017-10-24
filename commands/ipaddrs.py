@@ -14,7 +14,7 @@ __version__ = '0.2'
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
-@click.group(name='ipaddrs', short_help='Useful IP address tools.', context_settings=CONTEXT_SETTINGS, invoke_without_command=False)
+@click.group(name='ipaddrs', short_help='Useful IP address tools.', context_settings=CONTEXT_SETTINGS, invoke_without_command=False, cls=lazyTools.AliasedGroup)
 @click.pass_context
 def cli(ctx):
     """

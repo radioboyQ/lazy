@@ -3,6 +3,9 @@ import asyncio
 import asyncssh
 import click
 
+# Lazy Lib
+from lazyLib import lazyTools
+
 __version__ = '1.0'
 
 
@@ -47,7 +50,7 @@ async def run_multiple_clients(hosts: list, username: str, sh_command: str):
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 
-@click.group('denhac', help='Commands to help with denhac server administration.')
+@click.group('denhac', help='Commands to help with denhac server administration.', cls=lazyTools.AliasedGroup)
 @click.pass_context
 def cli(ctx):
     """

@@ -20,7 +20,7 @@ __version__ = '1.0'
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
-@click.group(name='nessus', context_settings=CONTEXT_SETTINGS, invoke_without_command=False, short_help='Tools that are useful for interacting with a Nessus scanner.')
+@click.group(name='nessus', context_settings=CONTEXT_SETTINGS, invoke_without_command=False, short_help='Tools that are useful for interacting with a Nessus scanner.', cls=lazyTools.AliasedGroup)
 @click.pass_context
 def cli(ctx):
     """
