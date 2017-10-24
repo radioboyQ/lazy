@@ -40,12 +40,17 @@ class MyCLI(click.MultiCommand):
         return rv
 
     def get_command(self, ctx, name):
-        ns = {}
-        fn = os.path.join(plugin_folder, name + '.py')
-        with open(fn) as f:
-            code = compile(f.read(), fn, 'exec')
-            eval(code, ns, ns)
-        return ns['cli']
+        matches = [x for x in self.list_commands(ctx) if x.startswith(name)]
+        if not matches:
+            return None
+        elif len(matches) == 1:
+            try:
+                mod = __import__('commands.' + matches[0], None, None, ['cli'])
+                return mod.cli
+            except ImportError:
+                return
+        ctx.fail('Too many matches: %s' % ', '.join(sorted(matches)))
+
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
