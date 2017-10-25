@@ -80,3 +80,25 @@ def add_IPs(ctx, filename):
             count += 1
 
     click.echo('[*] There are {} addresses in this file.'.format(count))
+
+
+@cli.command(name='host-in-scope', help='Check if a given host IP address is in scope.')
+@click.argument('host', type=LazyCustomTypes.ipaddr)
+@click.argument('filename', type=click.Path(exists=True, file_okay=True, dir_okay=False, resolve_path=True))
+@click.pass_context
+def add_IPs(ctx, host, filename):
+    """
+    Check if host is in filename
+    """
+    IP_List = list()
+
+    with open(filename, 'r') as f:
+        for l in f:
+            IP_List.append(l.strip())
+
+    if lazyTools.IPTools.ipInList(host, IP_List):
+        # IP is in scope
+        click.secho('[*] The address {} is in the scoping file. '.format(host), bold=True)
+    else:
+        # IP is not in scope
+        click.secho('[!] The address {} is *not* in scope. '.format(host), bold=True)
