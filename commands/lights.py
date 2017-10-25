@@ -1,6 +1,8 @@
 import click
 from lifxlan import LifxLAN, WARM_WHITE, PINK
 
+# My Junk
+from lazyLib import lazyTools
 
 __version__ = '1.0'
 
