@@ -3,8 +3,7 @@
 import click
 
 # My tools
-from .lazyTools import *
-from .lazyTools import *
+from lazyLib import lazyTools
 
 
 class PortIntParamType(click.ParamType):
@@ -24,10 +23,10 @@ class IPAddressParamType(click.ParamType):
 
     def convert(self, value, param, ctx):
         try:
-            ip_res = IPTools.checkIfIP(value)
+            ip_res = lazyTools.IPTools.checkIfIP(value)
             if ip_res is not None:
                 return ip_res
-        except IPToolsExceptions.NotValidIP:
+        except lazyTools.IPToolsExceptions.NotValidIP:
             self.fail('{} is not a valid IP address or IP address range'.format(value))
 
 
