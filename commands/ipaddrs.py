@@ -1,5 +1,5 @@
 # Standard Library
-import ipaddress
+from ipaddress import IPv4Address, IPv6Address, IPv4Network, IPv6Network, ip_address, ip_network
 from pprint import pprint
 
 # Third Party Libraries
@@ -53,9 +53,30 @@ def subtract_IPs(ctx, parent_network, child_network):
                 # De-doup the IP list
                 child_network_list.append(single_ip)
 
-    # for c_addr in child_network_list:
-    #     print(c_addr)
-
-
     for i in master_list:
         click.secho(i)
+
+@cli.command(name='add', help='Add multiple networks and hosts together.')
+@click.argument('filename', type=click.Path(exists=True, file_okay=True, dir_okay=False, resolve_path=True))
+@click.pass_context
+def add_IPs(ctx, filename):
+    """
+    Add all IP Addresses listed in the given file
+    """
+
+    IP_List = list()
+    count = 1
+
+    with open(filename, 'r') as f:
+        for l in f:
+            IP_List.append(l.strip())
+
+    for ip in IP_List:
+        ip_obj = lazyTools.IPTools.checkIfIP(ip)
+
+        if isinstance(ip_obj, IPv4Network) or isinstance(ip_obj, IPv6Network):
+            count += lazyTools.IPTools.countNetworkRange(ip_obj)
+        else:
+            count += 1
+
+    click.echo('[*] There are {} addresses in this file.'.format(count))
