@@ -9,6 +9,7 @@ from . import LazyCustomTypes
 
 
 # 3rd Party Libs
+import asyncssh
 import click
 import requests
 import toml
@@ -214,6 +215,19 @@ class AliasedGroup(click.Group):
         elif len(matches) == 1:
             return click.Group.get_command(self, ctx, matches[0])
         ctx.fail('Too many matches: %s' % ', '.join(sorted(matches)))
+
+class SSHTools(object):
+
+    @staticmethod
+    async def upload_file(rhost, rport, username, password, local_file, remote_file=None, preserve=False, recurse=False, block_size=16384, progress_handler=None, error_handler=None):
+        async with asyncssh.connect(rhost, port=rport, username=username, password=password, known_hosts=None) as conn:
+            conn.run('ls')
+            # if remote_file == None:
+            #     # Name the file the same as the src
+            #     await asyncssh.scp((conn, local_file), '.', preserve=preserve, recurse=recurse, block_size=block_size, progress_handler=progress_handler, error_handler=error_handler)
+            # else:
+            #     await asyncssh.scp((conn, local_file), remote_file, preserve=preserve, recurse=recurse, block_size=block_size, progress_handler=progress_handler, error_handler=error_handler)
+
 
 
 class IPToolsExceptions(Exception):
