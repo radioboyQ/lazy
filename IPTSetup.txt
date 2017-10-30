@@ -1,0 +1,8 @@
+git clone https://github.com/adaptivethreat/BloodHound.git /opt/BloodHound
+git clone https://github.com/byt3bl33d3r/CrackMapExec.git /opt/CrackMapExec
+git clone https://github.com/PowerShellEmpire/Empire.git /opt/Empire
+git clone https://github.com/ChrisTruncer/EyeWitness.git /opt/EyeWitness
+git clone https://github.com/Pickfordmatt/Prowl /opt/prowl
+git clone https://bitbucket.org/al14s/rawr.git /opt/rawr
+git clone https://github.com/Veil-Framework/Veil /opt/Veil
+
