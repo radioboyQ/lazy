@@ -1,4 +1,5 @@
 # Standard Library
+import asyncio
 from ipaddress import IPv4Address, IPv6Address, IPv4Network, IPv6Network, ip_address, ip_network
 import os
 import subprocess
@@ -216,17 +217,80 @@ class AliasedGroup(click.Group):
             return click.Group.get_command(self, ctx, matches[0])
         ctx.fail('Too many matches: %s' % ', '.join(sorted(matches)))
 
+
 class SSHTools(object):
+    @staticmethod
+    async def run_client(host: str, username: str, command: str, port=22,
+                         known_hosts='/Users/scottfraser/.ssh/known_hosts'):
+        """
+        Single connection to run a single command
+        """
+
+        async with asyncssh.connect(host, username=username, port=port, known_hosts=known_hosts) as conn:
+            result = await conn.run(command)
+
+            responseDict = {host: {command: {'result_stdout': result.stdout, 'result_stderr': result.stderr,
+                                             'result_exit_status': result.exit_status}}}
+
+        return responseDict
 
     @staticmethod
-    async def upload_file(rhost, rport, username, password, local_file, remote_file=None, preserve=False, recurse=False, block_size=16384, progress_handler=None, error_handler=None):
-        async with asyncssh.connect(rhost, port=rport, username=username, password=password, known_hosts=None) as conn:
-            conn.run('ls')
-            # if remote_file == None:
-            #     # Name the file the same as the src
-            #     await asyncssh.scp((conn, local_file), '.', preserve=preserve, recurse=recurse, block_size=block_size, progress_handler=progress_handler, error_handler=error_handler)
-            # else:
-            #     await asyncssh.scp((conn, local_file), remote_file, preserve=preserve, recurse=recurse, block_size=block_size, progress_handler=progress_handler, error_handler=error_handler)
+    async def run_multiple_clients(hosts: list, username: str, command: str, port=22,
+                                   known_hosts='/Users/scottfraser/.ssh/known_hosts'):
+        """
+        Run the same command against multiple hosts
+        """
+
+        tasks = (SSHTools.run_client(host, username, command, port=port, known_hosts=known_hosts) for host in hosts)
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        return results
+
+    @staticmethod
+    async def single_client_multiple_commands(host: str, username: str, commands: list, port=22,
+                                              known_hosts='/Users/scottfraser/.ssh/known_hosts'):
+        """
+        Run a list of commands against a single host
+        """
+
+        tasks = (SSHTools.run_client(host, username, command, port=port, known_hosts=known_hosts) for command in
+                 commands)
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        return SSHTools.combine_multi_results(results)
+
+    @staticmethod
+    def combine_multi_results(results: list):
+        """
+        Combine list with task responses into one big dictionary
+        """
+        resultsDict = dict()
+
+        for response in results:
+            for hostname in response:
+                # print(response[hostname])
+                if hostname in resultsDict:
+                    for command in response[hostname]:
+                        if command in resultsDict[hostname]:
+                            raise AsyncIOSSHAddingDuplicateCommandToResults('Duplicate command! {}'.format(command))
+                        else:
+                            resultsDict[hostname][command] = response[hostname][command]
+                else:
+                    resultsDict.update({hostname: response[hostname]})
+
+        return resultsDict
+
+
+class AsyncIOSSHAddingDuplicateCommandToResults(Exception):
+    """Adding a duplicate command to the command list"""
+
+
+def timeIt(startTime, stopTime):
+    """
+    Get the delta between two times and humanize them
+    """
+
+    return stopTime - startTime
 
 
 
