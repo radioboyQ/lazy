@@ -15,7 +15,7 @@ from lxml import etree
 from lazyLib import lazyTools
 from lazyLib import LazyCustomTypes
 
-__version__ = '2.5'
+__version__ = '2.8'
 
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -30,6 +30,7 @@ def cli(ctx):
     """
     pass
 
+
 @cli.command(name='report-name', help='Generate proper report names. ')
 @click.option('-s', '--client-short', help='Client three letter abbreviation.', type=click.STRING, required=True)
 @click.option('-u', '--user-initials', help='User\'s three initials', type=click.STRING, default='SAF')
@@ -41,12 +42,12 @@ def report_name(ctx, client_short, user_initials, report_type):
     Example report name: '{client_short}_{report_type}_{YYYY}-{MM}-{DD}_{user_initials}_v0.1.docx'
     Example WSR: '{client_short}_WSR_{date}.docx'
     """
-    utc = arrow.utcnow()
 
     if report_type.upper() == 'WSR':
         click.secho('{client_short}_{report_type}_{date}_Project_Status_Report.docx'.format(client_short=client_short.upper(), report_type=report_type.upper(), date=arrow.utcnow().to('local').format('YYYY-MM-DD')))
     else:
         click.secho('{client_short}_{report_type}_{date}_{user_initials}_v0.1.docx'.format(client_short=client_short.upper(), report_type=report_type.upper(), date=arrow.utcnow().to('local').format('YYYY-MM-DD'), user_initials=user_initials))
+
 
 @cli.command(name='nmap-service-parsing', context_settings=CONTEXT_SETTINGS, short_help='Parse a given Nmap file and output all accessable services')
 @click.option('-p', '--nmap-path', type=click.Path(exists=True, file_okay=True, dir_okay=True, readable=True, resolve_path=True, allow_dash=True), required=True)
@@ -59,7 +60,7 @@ def nmap_parser(ctx, nmap_path):
     headers = ['Host', 'Port', 'Protocol', 'Application', 'Version']
 
     output = io.StringIO()
-    finalData = list()
+    final_data = list()
 
     # Check if the file given is an XML file
     if os.path.isfile(nmap_path) and nmap_path.endswith('xml'):
@@ -85,16 +86,17 @@ def nmap_parser(ctx, nmap_path):
                                     except KeyError:
                                         version = ""
                     data = {'Host': addr, 'Port': portNumber, 'Protocol': protocol, 'Application': application, 'Version': version}
-                    finalData.append(data)
+                    final_data.append(data)
 
         writer = csv.DictWriter(output, headers)
         writer.writeheader()
-        writer.writerows(finalData)
+        writer.writerows(final_data)
 
         click.secho(output.getvalue())
 
     else:
         raise click.BadOptionUsage('You can\'t use a folder just yet.', ctx=ctx)
+
 
 @cli.command(name='upload', context_settings=CONTEXT_SETTINGS, short_help='Upload/Push a project directory to QNAP')
 @click.argument('projects', type=click.STRING, nargs=-1)
@@ -151,7 +153,7 @@ def upload_qnap(ctx, projects, year, share_name):
 @click.argument('host', type=click.STRING)
 @click.option('-p', '--port', help='Port number to access jump box.', type=click.IntRange(1, 655535), default=2222)
 @click.option('-u', '--username', help='Username to log in.', type=click.STRING, default='root')
-@click.option('-c', '--cert', help='Cert to use for the connection.', type=click.Path(exists=True, file_okay=True, dir_okay=False, resolve_path=True, allow_dash=True))
+@click.option('-c', '--cert', help='Cert to use for the connection.', type=click.Path(exists=True, file_okay=True, dir_okay=False, resolve_path=True, allow_dash=True), default='/Users/scottfraser/.ssh/known_hosts')
 @click.argument('cmd-file', type=click.Path(exists=True, dir_okay=False, resolve_path=True))
 @click.pass_context
 def test_setup(ctx, host, port, username, cert, cmd_file):
