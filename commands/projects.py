@@ -160,6 +160,9 @@ def test_setup(ctx, host, port, username, cert, cmd_file):
     """
     Set up a jump box for an upcoming pen test.
     """
+    # Create SSHTools instance
+    ssh = lazyTools.SSHTools(username=username, host=host, port=port, known_hosts=cert)
+
     cmd_list = list()
 
     with open(cmd_file, 'r') as f:
@@ -184,7 +187,7 @@ def test_setup(ctx, host, port, username, cert, cmd_file):
 @cli.command(name='copy-id', help='Works like \'ssh-copy-id\' but works on other ports and is simpler.')
 @click.argument('host', type=click.STRING)
 @click.option('--password', prompt=True, hide_input=True, confirmation_prompt=False)
-@click.option('-p', '--port', help='Port number to access jump box.', type=LazyCustomTypes.port, default=2222)
+@click.option('-p', '--port', help='Port number for remote server.', type=LazyCustomTypes.port, default=22)
 @click.option('-u', '--username', help='Username to log in.', type=click.STRING, default='root')
 @click.option('-i', '--id-file', help='ID file to copy. Defaults to \'~/.ssh/id_rsa.pub\'.', type=click.Path(exists=True, file_okay=True, dir_okay=False, resolve_path=True, allow_dash=True), default='{}/.ssh/id_rsa.pub'.format(os.environ['HOME']))
 @click.option('-a', '--authorized-keys-file', help='Location of the \'authorized_keys\' file on the remote host.', type=click.Path(exists=False, file_okay=True, dir_okay=False, resolve_path=False, allow_dash=True), default='~/.ssh/authorized_keys')
@@ -194,8 +197,13 @@ def copy_id(ctx, host, password, port, username, id_file, authorized_keys_file):
     Copies SSH ID file to a given host
     """
 
+    # Create SSHTools instance
+    ## Assume we are not using a cert to connect, just the password
+    ssh = lazyTools.SSHTools(username=username, host=host, port=port, password=password, known_hosts=None)
+
+    loop = asyncio.get_event_loop()
     try:
-        asyncio.get_event_loop().run_until_complete(lazyTools.SSHTools.upload_file(host, port, username, password, id_file, authorized_keys_file))
+        results = loop.run_until_complete(ssh.upload_file(srcFilePath=id_file, destFilePath=authorized_keys_file, progressBar=False))
     except (OSError, asyncssh.Error) as exc:
         sys.exit('[!] Operation failed: ' + str(exc))
 
