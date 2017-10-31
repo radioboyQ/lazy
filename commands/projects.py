@@ -169,10 +169,9 @@ def test_setup(ctx, host, port, username, cert, cmd_file):
         for l in f:
             cmd_list.append(l.strip())
 
+    loop = asyncio.get_event_loop()
     try:
-        loop = asyncio.get_event_loop()
-        result_dict = loop.run_until_complete(lazyTools.SSHTools.single_client_multiple_commands(host, username, cmd_list, known_hosts=None))
-        # result_dict = asyncio.get_event_loop().run_until_complete(run_client(host, username, cmd_list))
+        result_dict = loop.run_until_complete(ssh.single_client_multiple_commands(cmd_list))
     except (OSError, asyncssh.Error) as exc:
         sys.exit('SSH connection failed: ' + str(exc))
 

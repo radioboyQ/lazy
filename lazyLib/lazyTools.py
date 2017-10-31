@@ -292,7 +292,7 @@ class SSHTools(object):
 
         return results
 
-    async def single_client_multiple_commands(self, host: str, username: str, commands: list, port=22, known_hosts='/Users/scottfraser/.ssh/known_hosts'):
+    async def single_client_multiple_commands(self, commands: list):
         """
         Run a list of commands against a single host
         """
