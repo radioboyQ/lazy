@@ -15,7 +15,7 @@ import click
 import requests
 import toml
 
-__version__ = '1.5'
+__version__ = '2.0'
 
 def file_exist(path_in):
     """
@@ -219,48 +219,90 @@ class AliasedGroup(click.Group):
 
 
 class SSHTools(object):
-    @staticmethod
-    async def run_client(host: str, username: str, command: str, port=22,
-                         known_hosts='/Users/scottfraser/.ssh/known_hosts'):
+
+    def __init__(self, username: str, host:str = None, port=22, password=None, known_hosts='/Users/scottfraser/.ssh/known_hosts'):
+        self.host = host
+        self.username = username
+        self.port = port
+        self.password = password
+        self.known_hosts = known_hosts
+
+    def progress_handler_upload(self, srcpath, dstpath, offset, size):
+        self.print_progress(offset, size, prefix='Uploading: {}'.format(os.path.basename(os.path.normpath(srcpath.decode("utf-8") ))))
+
+    def print_progress(self, iteration, total, prefix='Progress', suffix='% Complete', decimals=1, length=100, fill='█'):
+        percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+        filled_length = int(length * iteration // total)
+        bar = fill * filled_length + '-' * (length - filled_length)
+        print('\r{} |{}| {}{}'.format(prefix, bar, percent, suffix), end='\r')
+        # Print New Line on Complete
+        if iteration == total:
+            print()
+
+    def get_size(self, filepath):
+        """
+        Get the size in bytes of a given file
+        """
+
+        return os.path.getsize(filepath)
+
+
+    async def upload_file(self, srcFilePath: str=None, destFilePath='.', progressBar: bool = True):
+        """
+        Upload a file to remote host
+        """
+        if self.password == None:
+            async with asyncssh.connect(self.host, username=self.username, port=self.port, known_hosts=self.known_hosts) as conn:
+                if progressBar:
+                    await asyncssh.scp(srcFilePath, (conn, destFilePath), progress_handler=self.progress_handler_upload)
+                else:
+                    await asyncssh.scp(srcFilePath, (conn, destFilePath))
+        else:
+            async with asyncssh.connect(self.host, username=self.username, password=self.password, port=self.port, known_hosts=self.known_hosts) as conn:
+                if progressBar:
+                    await asyncssh.scp(srcFilePath, (conn, destFilePath), progress_handler=self.progress_handler_upload)
+                else:
+                    await asyncssh.scp(srcFilePath, (conn, destFilePath))
+
+    async def run_client(self, command: str, host:str = None):
         """
         Single connection to run a single command
         """
 
-        async with asyncssh.connect(host, username=username, port=port, known_hosts=known_hosts) as conn:
-            result = await conn.run(command)
+        if host == None:
+            async with asyncssh.connect(self.host, username=self.username, port=self.port, known_hosts=self.known_hosts) as conn:
+                result = await conn.run(command)
+                responseDict = {self.host: {command: {'result_stdout': result.stdout, 'result_stderr': result.stderr, 'result_exit_status': result.exit_status}}}
 
-            responseDict = {host: {command: {'result_stdout': result.stdout, 'result_stderr': result.stderr,
-                                             'result_exit_status': result.exit_status}}}
+            return responseDict
+        else:
+            async with asyncssh.connect(host, username=self.username, port=self.port, known_hosts=self.known_hosts) as conn:
+                result = await conn.run(command)
+                responseDict = {self.host: {command: {'result_stdout': result.stdout, 'result_stderr': result.stderr, 'result_exit_status': result.exit_status}}}
 
-        return responseDict
+            return responseDict
 
-    @staticmethod
-    async def run_multiple_clients(hosts: list, username: str, command: str, port=22,
-                                   known_hosts='/Users/scottfraser/.ssh/known_hosts'):
+    async def run_multiple_clients(self, hosts: list, command: str):
         """
         Run the same command against multiple hosts
         """
 
-        tasks = (SSHTools.run_client(host, username, command, port=port, known_hosts=known_hosts) for host in hosts)
+        tasks = (self.run_client(command, host) for host in hosts)
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         return results
 
-    @staticmethod
-    async def single_client_multiple_commands(host: str, username: str, commands: list, port=22,
-                                              known_hosts='/Users/scottfraser/.ssh/known_hosts'):
+    async def single_client_multiple_commands(self, host: str, username: str, commands: list, port=22, known_hosts='/Users/scottfraser/.ssh/known_hosts'):
         """
         Run a list of commands against a single host
         """
 
-        tasks = (SSHTools.run_client(host, username, command, port=port, known_hosts=known_hosts) for command in
-                 commands)
+        tasks = (self.run_client(command) for command in commands)
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        return SSHTools.combine_multi_results(results)
+        return self.combine_multi_results(results)
 
-    @staticmethod
-    def combine_multi_results(results: list):
+    def combine_multi_results(self, results: list):
         """
         Combine list with task responses into one big dictionary
         """
@@ -272,7 +314,7 @@ class SSHTools(object):
                 if hostname in resultsDict:
                     for command in response[hostname]:
                         if command in resultsDict[hostname]:
-                            raise AsyncIOSSHAddingDuplicateCommandToResults('Duplicate command! {}'.format(command))
+                            raise ('Duplicate command! {}'.format(command))
                         else:
                             resultsDict[hostname][command] = response[hostname][command]
                 else:
