@@ -270,17 +270,27 @@ class SSHTools(object):
         """
 
         if host == None:
-            async with asyncssh.connect(self.host, username=self.username, port=self.port, known_hosts=self.known_hosts) as conn:
-                result = await conn.run(command)
-                responseDict = {self.host: {command: {'result_stdout': result.stdout, 'result_stderr': result.stderr, 'result_exit_status': result.exit_status}}}
+            if self.password == None:
+                async with asyncssh.connect(self.host, username=self.username, port=self.port, known_hosts=self.known_hosts) as conn:
+                    result = await conn.run(command)
+                    responseDict = {self.host: {command: {'result_stdout': result.stdout, 'result_stderr': result.stderr, 'result_exit_status': result.exit_status}}}
 
-            return responseDict
-        else:
-            async with asyncssh.connect(host, username=self.username, port=self.port, known_hosts=self.known_hosts) as conn:
-                result = await conn.run(command)
-                responseDict = {self.host: {command: {'result_stdout': result.stdout, 'result_stderr': result.stderr, 'result_exit_status': result.exit_status}}}
+            elif self.password:
+                async with asyncssh.connect(self.host, username=self.username, password=self.password, port=self.port,  known_hosts=self.known_hosts) as conn:
+                    result = await conn.run(command)
+                    responseDict = {self.host: {command: {'result_stdout': result.stdout, 'result_stderr': result.stderr, 'result_exit_status': result.exit_status}}}
+        elif host != None:
+            if self.password == None:
+                async with asyncssh.connect(self.host, username=self.username, port=self.port, known_hosts=self.known_hosts) as conn:
+                    result = await conn.run(command)
+                    responseDict = {self.host: {command: {'result_stdout': result.stdout, 'result_stderr': result.stderr, 'result_exit_status': result.exit_status}}}
 
-            return responseDict
+            elif self.password:
+                async with asyncssh.connect(self.host, username=self.username, password=self.password, port=self.port,  known_hosts=self.known_hosts) as conn:
+                    result = await conn.run(command)
+                    responseDict = {self.host: {command: {'result_stdout': result.stdout, 'result_stderr': result.stderr, 'result_exit_status': result.exit_status}}}
+
+        return responseDict
 
     async def run_multiple_clients(self, hosts: list, command: str):
         """
