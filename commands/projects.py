@@ -167,7 +167,11 @@ def test_setup(ctx, host, port, username, cert, cmd_file):
 
     with open(cmd_file, 'r') as f:
         for l in f:
-            cmd_list.append(l.strip())
+            if l.startswith('#'):
+                # Commented command in cmd_file
+                pass
+            else:
+                cmd_list.append(l.strip())
 
     loop = asyncio.get_event_loop()
     try:
@@ -196,7 +200,7 @@ def copy_id(ctx, host, password, port, username, id_file, authorized_keys_file):
     Copies SSH ID file to a given host
     """
     # Commands to ensure that 'authorized_keys' is there
-    cmdList = ['mkdir -p $HOME/.ssh/', 'touch ~/.ssh/authorized_keys', 'chmod 644 ~/.ssh/authorized_keys']
+    cmdList = ['mkdir -p $HOME/.ssh/; touch ~/.ssh/authorized_keys; chmod 644 ~/.ssh/authorized_keys']
 
     # Create SSHTools instance
     ## Assume we are not using a cert to connect, just the password
