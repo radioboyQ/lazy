@@ -9,7 +9,7 @@ import sys
 # 3rd Party Libs
 import click
 from lxml import etree
-# from tabulate import tabulate
+from tabulate import tabulate
 
 # My Junk
 from nessrest.nessrest import ness6rest
@@ -238,3 +238,72 @@ def sslippycup(ctx, nessus_files, plugin_id):
 
     for host_port in outlist:
         click.echo(host_port)
+
+
+
+@cli.command(name='event-count', short_help='Count the number of times each event occurs for vuln assessments.')
+@click.argument('nessus_files', nargs=-1, type=click.Path(exists=True, file_okay=True, dir_okay=True, resolve_path=True,readable=True))
+@click.pass_context
+def event_count(ctx, nessus_files):
+    """
+    Goals:
+    - Count the number of events
+    - Order by severity then alphabetically
+    """
+
+    # Output format:
+    ## {<plugin_id_number>: {'Severity': <severity>, 'Plugin Name': <pluginName>, 'Count': <count>}}
+    outdict = dict()
+
+    nessus_list = list()
+
+    sev_list = {'0': 'Informational', '1': 'Low', '2': 'Medium', '3': 'High', '4': 'High'}
+
+    for entry in nessus_files:
+        if os.path.isfile(entry):
+            if entry.split('.')[-1:][0] == 'nessus':
+                nessus_list.append(os.path.split(entry))
+        elif os.path.isdir(entry):
+            for (dirpath, dirnames, filenames) in walk(entry):
+                for fn in filenames:
+                    if fn.split('.')[-1:][0] == 'nessus':
+                        nessus_list.append((dirpath, fn))
+
+    # Make sure we actually found a Nessus file to play with
+    if len(nessus_list) == 0:
+        click.secho('[!] No Nessus files were specified.', fg='red')
+        click.secho('[*] Exiting.', fg='green')
+        sys.exit()
+
+    for file in nessus_list:
+        nessus_file_path = os.path.join(file[0], file[1])
+        if os.path.isfile(nessus_file_path):
+            try:
+                tree = etree.parse(nessus_file_path)
+
+                root = tree.getroot()
+
+                for i in root.xpath('./Report/ReportHost/ReportItem'):
+                    if i.attrib['pluginID'] in outdict:
+                        tempCount = outdict[i.attrib['pluginID']]['Count']
+                        tempCount += 1
+                        outdict[i.attrib['pluginID']] = {'Severity': i.attrib['severity'], 'Vulnerability Name': i.attrib['pluginName'], 'Count': tempCount}
+
+                    else:
+                        # First time we've seen this plugin, count = 0
+                        outdict[i.attrib['pluginID']] = {'Severity': i.attrib['severity'], 'Vulnerability Name': i.attrib['pluginName'], 'Count': 0}
+
+            except:
+                click.echo('An error occured, are you sure that you\'ve got a Nessus file?')
+                click.echo(sys.exc_info()[0])
+                sys.exit(1)
+
+    delimeter = ','
+
+    headers = 'Severity' + delimeter + 'Vulnerability Name' + delimeter + 'Total Occurrences Found'
+    click.echo(headers)
+
+    for plugin in outdict:
+
+
+        click.echo(sev_list[outdict[plugin]['Severity']] + delimeter + outdict[plugin]['Vulnerability Name'] + delimeter + str(outdict[plugin]['Count']))
