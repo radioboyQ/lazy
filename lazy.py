@@ -1,3 +1,5 @@
+#!/Users/scottfraser/.virtualenvs/lazy/bin/python
+
 # Standard Lib
 import os
 import logging
