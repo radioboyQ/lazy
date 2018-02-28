@@ -109,3 +109,12 @@ def backup(ctx):
         with open(backup_full, 'rb') as f:
             s3.upload_fileobj(f, bucket_name, backup_filename)
     click.echo('[!] Done! \n')
+
+@cli.command('maps', help='Open Google Maps with a specific user ID.', context_settings=CONTEXT_SETTINGS)
+@click.option('-i', '--id', help='User ID to open as.', default=1, type=click.INT)
+@click.pass_context
+def maps(ctx, id):
+    """
+    Open Google Maps with the specified user ID
+    """
+    click.launch('https://www.google.com/maps/?authuser={}'.format(id))
