@@ -22,7 +22,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.pass_context
 def cli(ctx):
     """
-    A collection of tools which are useful but don\'t fit anywhere else.
+    A collection of tools for GoPhish campaign setups.
     """
     pass
 
