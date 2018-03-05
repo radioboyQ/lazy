@@ -1,4 +1,4 @@
-#!/Users/scottfraser/.virtualenvs/lazy/bin/python
+#!/usr/local/bin/python3
 
 # Standard Lib
 import os
@@ -94,5 +94,5 @@ def cli(ctx, config_path, debug, verbose):
 
 
 
-if __name__ == "__main__":
-    cli()
+# if __name__ == "__main__":
+#     cli()
