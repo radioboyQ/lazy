@@ -29,7 +29,7 @@ def cli(ctx):
 @cli.command('email-import', help='Import a list of emails into a GoPhish server.', context_settings=CONTEXT_SETTINGS)
 @click.argument('user-csv', type=click.Path(exists=True, file_okay=True, dir_okay=True, readable=True, resolve_path=True, allow_dash=False))
 @click.option('-g', '--group-size', help='Define the email group size on import.', default='0', type=click.INT)
-@click.option('-n', '--group-name', help='Set the base name of each group. i.e. GuidePoint becomes  GuidePoint_1', type=click.STRING, default='Phishing_Campaign')
+@click.option('-n', '--group-name', help='Set the base name of each group. i.e. GPS_Group becomes  GPS_Group_1', type=click.STRING, default='Phishing_Campaign')
 # @click.option('-d', '--dry-run', help='Show group names and group members, but don\'t push updates to the GoPhish server.', type=click.BOOL, default=False)
 @click.option('-s', '--section-name', help='Name of the config section to use.', type=click.STRING, required=True)
 @click.pass_context
