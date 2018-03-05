@@ -94,5 +94,5 @@ def cli(ctx, config_path, debug, verbose):
 
 
 
-# if __name__ == "__main__":
-#     cli()
+if __name__ == "__main__":
+    cli()
