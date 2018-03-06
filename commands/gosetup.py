@@ -156,6 +156,9 @@ def delete_groups(ctx, group_prefix, section_name):
 
     debug = ctx.parent.parent.params['debug']
 
+    group_found = False
+    group_counter = 0
+
     if section_name.lower() in config_options['gophish']:
 
         # Debug print statement to check if the section name was properly found
@@ -196,7 +199,10 @@ def delete_groups(ctx, group_prefix, section_name):
 
         for group in groups:
             groupName = group.name
+            group_prefix = group_prefix.replace(' ','_')
             if group.name.startswith(group_prefix):
+                group_found = True
+                group_counter += 1
                 if debug:
                     click.echo('Found group: {}'.format(groupName))
 
@@ -207,9 +213,11 @@ def delete_groups(ctx, group_prefix, section_name):
                     click.secho('[!] {message}. Remediate the issue and try again.'.format(message=deleteResponse.message),
                                 fg='red', bold=True)
                     raise click.Abort()
-            # ToDo: Add a way to tell if no groups were deleted
-            # else:
-            #     click.secho('[!] No groups were found that start with {}.'.format(group_prefix), bold=True)
+        if group_found == False:
+            click.secho('[!] No groups were found that start with {} .'.format(group_prefix), bold=True)
+        else:
+            click.secho('[*] {count} groups were found and they were deleted.'.format(count=group_counter), bold=True, fg='green')
+
 
 def listUsersInDict(group) -> list:
     """
