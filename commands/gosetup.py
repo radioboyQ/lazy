@@ -39,7 +39,6 @@ def email_import(ctx, user_csv, group_size, group_name, section_name):
     """
     usersChunked = dict()
 
-
     config_options = lazyTools.TOMLConfigImport(ctx.parent.parent.params['config_path'])
 
     debug = ctx.parent.parent.params['debug']
@@ -126,20 +125,21 @@ def email_import(ctx, user_csv, group_size, group_name, section_name):
                 usersChunked.update({group_name.format(count): userListChunk})
 
         # For each group in usersChunked, upload
-        for chunkName in usersChunked:
-            targetList = list()
-            for user in usersChunked[chunkName]:
-                targetList.append(User(first_name=user['First Name'], last_name=user['Last Name'], email=user['Email'], position=user['Position']))
-            group = Group(name=chunkName, targets=targetList)
+        with click.progressbar(usersChunked, length=len(usersChunked), label='Groups Added', show_eta=False, show_pos=True) as bar:
+            for chunkName in bar:
+                targetList = list()
+                for user in usersChunked[chunkName]:
+                    targetList.append(User(first_name=user['First Name'], last_name=user['Last Name'], email=user['Email'], position=user['Position']))
+                group = Group(name=chunkName, targets=targetList)
 
-            group = api.groups.post(group)
+                group = api.groups.post(group)
 
-            if isinstance(group, Error):
-                click.secho('[!] {message}. Remediate the issue and try again.'.format(message=group.message), fg='red', bold=True)
-                raise click.Abort()
+                if isinstance(group, Error):
+                    click.secho('[!] {message}. Remediate the issue and try again.'.format(message=group.message), fg='red', bold=True)
+                    raise click.Abort()
 
-            if debug:
-                click.echo('Group {} was successfully added.'.format(group.name))
+                if debug:
+                    click.echo('Group {} was successfully added.'.format(group.name))
 
     else:
         raise click.BadParameter('The section name \'{}\' doesn\'t appear to exist. Check the config file and try again.'.format(ctx.params['section_name']))
@@ -197,22 +197,23 @@ def delete_groups(ctx, group_prefix, section_name):
 
         groups = api.groups.get()
 
-        for group in groups:
-            groupName = group.name
-            group_prefix = group_prefix.replace(' ','_')
-            if group.name.startswith(group_prefix):
-                group_found = True
-                group_counter += 1
-                if debug:
-                    click.echo('Found group: {}'.format(groupName))
+        with click.progressbar(groups, length=len(groups), label='Groups Removed', show_eta=False, show_pos=True) as bar:
+            for group in bar:
+                groupName = group.name
+                group_prefix = group_prefix.replace(' ','_')
+                if group.name.startswith(group_prefix):
+                    group_found = True
+                    group_counter += 1
+                    if debug:
+                        click.echo('Found group: {}'.format(groupName))
 
-                deleteResponse = api.groups.delete(group.id)
-                # The response is just a bunch of None and not helpful.
+                    deleteResponse = api.groups.delete(group.id)
+                    # The response is just a bunch of None and not helpful.
 
-                if isinstance(deleteResponse, Error):
-                    click.secho('[!] {message}. Remediate the issue and try again.'.format(message=deleteResponse.message),
-                                fg='red', bold=True)
-                    raise click.Abort()
+                    if isinstance(deleteResponse, Error):
+                        click.secho('[!] {message}. Remediate the issue and try again.'.format(message=deleteResponse.message),
+                                    fg='red', bold=True)
+                        raise click.Abort()
         if group_found == False:
             click.secho('[!] No groups were found that start with {} .'.format(group_prefix), bold=True)
         else:
