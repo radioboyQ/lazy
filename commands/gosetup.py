@@ -18,7 +18,7 @@ requests.packages.urllib3.disable_warnings()
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
-@click.group(name='gosetup', short_help='A collection of tools to setup a GoPhish phishing campaign.', context_settings=CONTEXT_SETTINGS, cls=lazyTools.AliasedGroup)
+@click.group(name='gosetup', help='A collection of tools to setup a GoPhish phishing campaign.', context_settings=CONTEXT_SETTINGS, cls=lazyTools.AliasedGroup)
 @click.pass_context
 def cli(ctx):
     """
