@@ -99,7 +99,6 @@ def schedule_campaign(ctx, group_name, campaign_name, section_name, send_rate):
             # Format Campaign Name
             campaign_name = campaign_name.replace(' ', '_')
 
-
             # Get list of active campaigns
             campaigns = api.campaigns.get()
 
@@ -115,42 +114,120 @@ def schedule_campaign(ctx, group_name, campaign_name, section_name, send_rate):
 
             # BEGIN GROUP SETUP SECTION
             group_name = group_name.replace(' ', '_')
-            for group in groups:
-                if group.name.startswith(group_name):
-                    group_found = True
-                    group_counter += 1
-                    if debug:
-                        click.secho('\n[*] {} matches and will be included in campaign setup.'.format(group.name))
 
-                    final_campaign_name = "{}_{}".format(campaign_name, group_counter)
+            with click.progressbar(groups, length=len(groups), label='Campaigns Added', show_eta=False) as bar:
+                for group in bar:
+                    if group.name.startswith(group_name):
+                        group_found = True
+                        group_counter += 1
+                        if debug:
+                            click.secho('\n[*] {} matches and will be included in campaign setup.'.format(group.name))
 
-                    launch_date = datetime.strptime(start_date.add(minutes=send_rate*group_counter).format('%b %d %Y %I:%M%p'), '%b %d %Y %I:%M%p')
+                        final_campaign_name = "{}_{}".format(campaign_name, group_counter)
 
-                    # launch_date = launch_date.replace(tzinfo=timezone('UTC'))
+                        launch_date = datetime.strptime(start_date.add(minutes=send_rate*group_counter).format('%b %d %Y %I:%M%p'), '%b %d %Y %I:%M%p')
 
-                    if debug:
-                        click.echo('[*] Start time will be {} EST.'.format(est.convert(launch_date)))
-                    launch_date = launch_date.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+                        # launch_date = launch_date.replace(tzinfo=timezone('UTC'))
+
+                        # Commented because progress bar
+                        # if debug:
+                        #     click.echo('[*] Start time will be {} EST.'.format(est.convert(launch_date)))
+                        launch_date = launch_date.strftime("%Y-%m-%dT%H:%M:%S+00:00")
 
 
-                    # Add a campaign and append each group to it pending campaign doesn't exist
-                    headers = {'Content-type': 'application/json', 'Accept': 'application/json'}
-                    url = 'https://localhost:3333/api/campaigns/?api_key=fbe27eec3692aad93bd4d57cd25c327e4306f85592ba9ab27a9303a2ca77870c'
+                        # Add a campaign and append each group to it pending campaign doesn't exist
+                        headers = {'Content-type': 'application/json', 'Accept': 'application/json'}
+                        url = 'https://localhost:3333/api/campaigns/?api_key=fbe27eec3692aad93bd4d57cd25c327e4306f85592ba9ab27a9303a2ca77870c'
 
-                    data = json.dumps({"name": final_campaign_name, "template": {"name": "Stein Mart Landing"}, "url": "https://steinmart.org", "page": {"name": "Stein Mart Office 365 Landing page"}, "smtp": {"name": "Sendgrid Spoof"}, "launch_date": launch_date, "groups":[{"name": "Test Group"}]})
-                    r = requests.post(url, data=data, headers=headers, verify=False)
-                    # print(r.text)
+                        # ToDo: Add a way to dynamically specify templates, URL, landing page, SMTP sending profile and start date for launch
+                        data = json.dumps({"name": final_campaign_name, "template": {"name": "Stein Mart Landing"}, "url": "https://steinmart.org", "page": {"name": "Stein Mart Office 365 Landing page"}, "smtp": {"name": "Sendgrid Spoof"}, "launch_date": launch_date, "groups":[{"name": group.name}]})
+                        r = requests.post(url, data=data, headers=headers, verify=False)
+                        # ToDo: Add error parsing
+                        if debug:
+                             click.echo(r.text)
 
             if group_found == False:
-                click.secho('[!] No groups were found that start with {} .'.format(group_name), bold=True)
+                click.secho('[!] No groups were found that start with {} .'.format(group_name), bold=True, show_pos=True)
                 raise click.Abort()
 
             click.echo('[!] Done adding campaigns!')
-            for campaign in campaigns:
-                pprint(vars(campaign))
+            # for campaign in campaigns:
+            #     pprint(vars(campaign))
 
     else:
         raise click.BadParameter('The section name \'{}\' doesn\'t appear to exist. Check the config file and try again.'.format(ctx.params['section_name']))
+
+
+@cli.command('delete-campaign', help='Remove campaigns with a given prefix.', context_settings=CONTEXT_SETTINGS)
+@click.argument('campaign-prefix', type=click.STRING)
+@click.option('-s', '--section-name', help='Name of the config section to use.', type=click.STRING, required=True)
+@click.pass_context
+def delete_campaign(ctx, campaign_prefix, section_name):
+    """
+    Remove campaigns that start with a given prefix.
+    """
+    config_options = lazyTools.TOMLConfigImport(ctx.parent.parent.params['config_path'])
+
+    debug = ctx.parent.parent.params['debug']
+    group_found = False
+    group_counter = 0
+
+    if section_name.lower() in config_options['gophish']:
+
+        # Debug print statement to check if the section name was properly found
+        if debug:
+            click.secho('[*] Section name found in config file.', fg='green')
+
+        # Check if we need to be on the VPN
+        if config_options['gophish'][section_name.lower()]['VPN_Required']:
+            # Skip VPN check if debug is True
+            if debug:
+                click.secho('[*] Skipping VPN check ')
+            else:
+                if lazyTools.ConnectedToVPN(ctx.parent.parent.params['config_path']):
+                    # Connected to VPN
+                    if debug:
+                        click.secho('[*] Connected to VPN', fg='green')
+                else:
+                    click.secho('The VPN does not appear to be connected. Try again after connecting to the VPN. ')
+                    raise click.Abort()
+
+            # Connect to GoPhish server
+            if debug:
+                click.echo('[*] Using hostname: https://{hostname}:{port}'.format(hostname=config_options['gophish'][section_name.lower()]['Hostname'], port=config_options['gophish'][section_name.lower()]['Port']))
+                if config_options['gophish'][section_name.lower()]['Verify_SSL']:
+                    click.echo('[*] SSL connections will be verified.')
+                else:
+                    click.secho('[*] SSL connections will not be verified.', bold=True)
+
+            api = Gophish(config_options['gophish'][section_name.lower()]['api_key'], host='https://{hostname}:{port}'.format(hostname=config_options['gophish'][section_name.lower()]['Hostname'], port=config_options['gophish'][section_name.lower()]['Port']), verify=config_options['gophish'][section_name.lower()]['Verify_SSL'])
+
+            # BEGIN CAMPAIGN SETUP SECTION
+            # Format Campaign Name
+            campaign_prefix = campaign_prefix.replace(' ', '_')
+
+            # Get list of active campaigns
+            campaigns = api.campaigns.get()
+
+            if len(campaigns) == 0:
+                click.secho('[!] No campaigns match the campaign-prefix {}.'.format(campaign_prefix))
+                raise click.Abort()
+
+            with click.progressbar(campaigns, length=len(campaigns), label='Campaigns Removed', show_eta=False, show_pos=True) as bar:
+                for c in bar:
+                    if c.name.startswith(campaign_prefix):
+                        if debug:
+                            click.echo('[*] Deleting campaign {}'.format(c.name))
+                        # pprint(vars(c), indent=4)
+                        response = api.campaigns.delete(campaign_id=c.id)
+
+                        # Commented because progress bar
+                        # if debug:
+                        #     click.echo('[*] Result: {}'.format(vars(response)))
+
+
+
+
 
 
 def listUsersInDict(group) -> list:
