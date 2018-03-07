@@ -221,14 +221,6 @@ def delete_campaign(ctx, campaign_prefix, section_name):
                         # pprint(vars(c), indent=4)
                         response = api.campaigns.delete(campaign_id=c.id)
 
-                        # Commented because progress bar
-                        # if debug:
-                        #     click.echo('[*] Result: {}'.format(vars(response)))
-
-
-
-
-
 
 def listUsersInDict(group) -> list:
     """
