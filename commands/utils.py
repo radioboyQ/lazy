@@ -31,7 +31,7 @@ def share(ctx, share_name, status):
     """
     Mount or unmount a shared drive with configurations from the global config file
     """
-    configOptions = lazyTools.TOMLConfigImport(ctx.parent.parent.params['config_path'])
+    configOptions = lazyTools.TOMLConfigCTXImport(ctx)
 
     if share_name.lower() in configOptions['share']:
         if configOptions['share'][share_name.lower()]['VPN_Required']:

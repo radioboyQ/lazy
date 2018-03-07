@@ -112,7 +112,7 @@ def upload_qnap(ctx, projects, year, share_name):
     """
     # ToDo: Add functionality to only upload Deliverables, Evidence, Administrative, or Retest
 
-    configOptions = lazyTools.TOMLConfigImport(ctx.parent.parent.params['config_path'])
+    configOptions = lazyTools.TOMLConfigCTXImport(ctx)
 
     remotePath = '/Volumes/ProServices/Projects/{year}/'.format(year=year)
 
@@ -215,7 +215,6 @@ def copy_id(ctx, host, password, port, username, id_file, authorized_keys_file):
         sys.exit('[!] Operation failed: ' + str(exc))
 
     click.echo('[*] Uploaded your SSH keys successfully.')
-
 
 if __name__ == '__main__':
     cli()

@@ -39,7 +39,7 @@ def email_import(ctx, user_csv, group_size, group_name, section_name):
     """
     usersChunked = dict()
 
-    config_options = lazyTools.TOMLConfigImport(ctx.parent.parent.params['config_path'])
+    config_options = lazyTools.TOMLConfigCTXImport(ctx)
 
     debug = ctx.parent.parent.params['debug']
 
@@ -152,7 +152,7 @@ def delete_groups(ctx, group_prefix, section_name):
     """
     Delete groups that start with a given string.
     """
-    config_options = lazyTools.TOMLConfigImport(ctx.parent.parent.params['config_path'])
+    config_options = lazyTools.TOMLConfigCTXImport(ctx)
 
     debug = ctx.parent.parent.params['debug']
 

@@ -39,7 +39,7 @@ def schedule_campaign(ctx, group_name, campaign_name, section_name, send_rate):
     """
     Create Campaigns for sending each group with a time delay.
     """
-    config_options = lazyTools.TOMLConfigImport(ctx.parent.parent.params['config_path'])
+    config_options = lazyTools.TOMLConfigCTXImport(ctx)
 
     debug = ctx.parent.parent.params['debug']
 
@@ -166,7 +166,7 @@ def delete_campaign(ctx, campaign_prefix, section_name):
     """
     Remove campaigns that start with a given prefix.
     """
-    config_options = lazyTools.TOMLConfigImport(ctx.parent.parent.params['config_path'])
+    config_options = lazyTools.TOMLConfigCTXImport(ctx)
 
     debug = ctx.parent.parent.params['debug']
     group_found = False
