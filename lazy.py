@@ -49,7 +49,8 @@ class MyCLI(click.MultiCommand):
             try:
                 mod = __import__('commands.' + matches[0], None, None, ['cli'])
                 return mod.cli
-            except ImportError:
+            except ImportError as e:
+                click.secho('[!] A plugin failed to import. Error: {}\n'.format(e), fg='red')
                 return
         ctx.fail('Too many matches: %s' % ', '.join(sorted(matches)))
 
