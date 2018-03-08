@@ -12,7 +12,7 @@ from lxml import etree
 from tabulate import tabulate
 
 # My Junk
-from nessrest.nessrest import ness6rest
+from nessrest import ness6rest
 from lazyLib import lazyTools
 from lazyLib import LazyCustomTypes
 
