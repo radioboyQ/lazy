@@ -13,9 +13,6 @@ import requests
 # Lazy Lib
 from lazyLib import lazyTools
 
-# Check if we are connected to the VPN
-# print(lazyTools.ConnectedToVPN(ctx.params['config']))
-
 requests.packages.urllib3.disable_warnings()
 
 # define our default configuration options
