@@ -1,8 +1,13 @@
 # Standard Libraries
 import csv
+import os
 from pprint import pprint
 
 # Third party Libraries
+import aiohttp
+import async_timeout
+import asyncio
+import asyncssh
 import click
 from gophish import Gophish
 from gophish.models import *
@@ -223,6 +228,105 @@ def delete_groups(ctx, group_prefix, section_name):
     else:
         raise click.BadParameter('The section name \'{}\' doesn\'t appear to exist. Check the config file and try again.'.format(ctx.params['section_name']))
 
+@cli.command('temp',  context_settings=CONTEXT_SETTINGS)
+@click.option('-s', '--section-name', help='Name of the config section to use.', type=click.STRING, required=True)
+@click.pass_context
+def temp(ctx, section_name):
+    """
+    AsyncIOSSH Port Forward Test
+    """
+    config_options = lazyTools.TOMLConfigCTXImport(ctx)
+
+    # pprint(config_options, indent=4)
+
+    debug = lazyTools.parentSetting(ctx, 'debug')
+    verbose = lazyTools.parentSetting(ctx, 'verbose')
+
+    host = config_options['gophish'][section_name.lower()]['Hostname']
+    ssh_username = config_options['gophish'][section_name.lower()]['ssh_username']
+    ssh_port = config_options['gophish'][section_name.lower()]['ssh_port']
+    ssh_listen_interface = config_options['gophish'][section_name.lower()]['ssh_listen_interface']
+    ssh_listen_port = config_options['gophish'][section_name.lower()]['ssh_listen_port']
+    gophish_port = config_options['gophish'][section_name.lower()]['gophish_port']
+    gophish_interface = config_options['gophish'][section_name.lower()]['gophish_interface']
+    authorized_keys_file = config_options['gophish'][section_name.lower()]['authorized_keys_file']
+    id_file = config_options['gophish'][section_name.lower()]['id_file']
+
+
+    if section_name.lower() in config_options['gophish']:
+
+        # Debug print statement to check if the section name was properly found
+        if debug:
+            click.secho('[*] Section name found in config file.', fg='green')
+
+        # Check if we need to be on the VPN
+        if config_options['gophish'][section_name.lower()]['VPN_Required']:
+            if debug:
+                click.echo('[*] Skipping VPN check.')
+            else:
+                if lazyTools.ConnectedToVPN(lazyTools.parentSetting(ctx, 'config_path')):
+                    # Connected to VPN
+                    if debug:
+                        click.secho('[*] Connected to VPN', fg='green')
+                else:
+                    raise click.Abort('The VPN does not appear to be connected. Try again after connecting to the VPN. ')
+        try:
+            tasks = asyncio.gather(local_port_forward(host, ssh_port, ssh_username, ssh_listen_interface, ssh_listen_port, id_file, gophish_port, gophish_interface, debug), webRequest())
+
+            event_loop = asyncio.get_event_loop()
+
+            event_loop.run_until_complete(tasks)
+
+        except (OSError, asyncssh.Error) as exc:
+            click.secho('SSH connection failed: {}'.format(str(exc)), fg='red')
+            click.Abort()
+        except KeyboardInterrupt:
+            click.secho('[!] Keyboard interrupt caught, exiting!', bold=True)
+            shutdown(event_loop)
+            click.Abort()
+
+    else:
+        raise click.BadParameter('The section name \'{}\' doesn\'t appear to exist. Check the config file and try again.'.format(ctx.params['section_name']))
+
+def shutdown(loop):
+    for task in asyncio.Task.all_tasks():
+        click.echo('[*] Canceling task.')
+        task.cancel()
+
+
+async def fetch(session, url):
+    async with async_timeout.timeout(10):
+        async with session.get(url) as response:
+            return response.status
+
+async def webRequest():
+    await asyncio.sleep(5)
+    print('Making web request')
+
+    async with aiohttp.ClientSession() as session:
+        html = await fetch(session, 'http://localhost')
+        print(html)
+
+
+async def local_port_forward(ssh_target: str, ssh_port: int, ssh_username: str, local_host: str, local_port: int, id_file: str, remote_port: int, remote_host: str, debug):
+    """
+    Function to spin up a local listener
+    :param ssh_target: IP address to connect to
+    :param listen_host: The hostname or address on the local host to listen on
+    :param local_port: The port to forward from. This is the first number in -L 8080:<remote_host>:80
+    :param remote_port:  The port to forward to. This is the last number in `-L 8080:<remote_host>:80`
+    :param remote_host: Target host. Can be localhost or something else the target can reach.
+    """
+    if debug:
+        click.echo('[*] Attempting to connect to {} on port {} as user {} with SSH ID file {}'.format(ssh_target, ssh_port, ssh_username, id_file ))
+
+    async with asyncssh.connect(host=ssh_target, username=ssh_username, port=ssh_port, known_hosts=None, client_keys=[id_file]) as conn:
+        # print(remote_port)
+        # print(type(remote_port))
+        # raise click.Abort()
+        listener = await conn.forward_local_port('', local_port, remote_host, remote_port)
+        click.echo('Listening on port {}'.format(listener.get_port()))
+        await listener.wait_closed()
 
 def listUsersInDict(group) -> list:
     """
