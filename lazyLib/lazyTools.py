@@ -361,6 +361,20 @@ class SSHTools(object):
 
         return resultsDict
 
+    async def local_port_forward(self, local_host: str, local_port: int, remote_port: int, remote_host: str):
+        """
+        Function to spin up a local listener
+        :param listen_host: The hostname or address on the local host to listen on
+        :param local_port: The port to forward from. This is the first number in -L 8080:<remote_host>:80
+        :param remote_port:  The port to forward to. This is the last number in `-L 8080:<remote_host>:80`
+        :param remote_host: Target host. Can be localhost or something else the target can reach.
+        """
+        async with asyncssh.connect(remote_host, username=self.username, port=self.port, known_hosts=self.known_hosts) as conn:
+            listener = await conn.forward_local_port(local_host, local_port, remote_host, remote_port)
+            click.echo('[*] Listening on port {}'.format(listener.get_port()))
+
+
+
 
 class AsyncIOSSHAddingDuplicateCommandToResults(Exception):
     """Adding a duplicate command to the command list"""
