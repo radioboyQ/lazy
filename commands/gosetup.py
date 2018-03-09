@@ -41,7 +41,8 @@ def email_import(ctx, user_csv, group_size, group_name, section_name):
 
     config_options = lazyTools.TOMLConfigCTXImport(ctx)
 
-    debug = ctx.parent.parent.params['debug']
+    debug = lazyTools.parentSetting(ctx, 'debug')
+    verbose = lazyTools.parentSetting(ctx, 'verbose')
 
     if section_name.lower() in config_options['gophish']:
 
@@ -154,7 +155,8 @@ def delete_groups(ctx, group_prefix, section_name):
     """
     config_options = lazyTools.TOMLConfigCTXImport(ctx)
 
-    debug = ctx.parent.parent.params['debug']
+    debug = lazyTools.parentSetting(ctx, 'debug')
+    verbose = lazyTools.parentSetting(ctx, 'verbose')
 
     group_found = False
     group_counter = 0
@@ -171,7 +173,7 @@ def delete_groups(ctx, group_prefix, section_name):
             if debug:
                 click.secho('[*] Skipping VPN check ')
             else:
-                if lazyTools.ConnectedToVPN(ctx.parent.parent.params['config_path']):
+                if lazyTools.ConnectedToVPN(lazyTools.parentSetting(ctx, 'config_path')):
                     # Connected to VPN
                     if debug:
                         click.secho('[*] Connected to VPN', fg='green')
@@ -218,6 +220,8 @@ def delete_groups(ctx, group_prefix, section_name):
             click.secho('[!] No groups were found that start with {} .'.format(group_prefix), bold=True)
         else:
             click.secho('[*] {count} groups were found and they were deleted.'.format(count=group_counter), bold=True, fg='green')
+    else:
+        raise click.BadParameter('The section name \'{}\' doesn\'t appear to exist. Check the config file and try again.'.format(ctx.params['section_name']))
 
 
 def listUsersInDict(group) -> list:
