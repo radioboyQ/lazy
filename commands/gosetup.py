@@ -9,6 +9,7 @@ import async_timeout
 import asyncio
 import asyncssh
 import click
+import asyncGoPhishClient
 from gophish import Gophish
 from gophish.models import *
 import requests
@@ -249,8 +250,10 @@ def temp(ctx, section_name):
     ssh_listen_port = config_options['gophish'][section_name.lower()]['ssh_listen_port']
     gophish_port = config_options['gophish'][section_name.lower()]['gophish_port']
     gophish_interface = config_options['gophish'][section_name.lower()]['gophish_interface']
+    api_key = config_options['gophish'][section_name.lower()]['api_key']
     authorized_keys_file = config_options['gophish'][section_name.lower()]['authorized_keys_file']
     id_file = config_options['gophish'][section_name.lower()]['id_file']
+    verify = config_options['gophish'][section_name.lower()]['Verify_SSL']
 
 
     if section_name.lower() in config_options['gophish']:
@@ -292,21 +295,6 @@ def shutdown(loop):
     for task in asyncio.Task.all_tasks():
         click.echo('[*] Canceling task.')
         task.cancel()
-
-
-async def fetch(session, url):
-    async with async_timeout.timeout(10):
-        async with session.get(url) as response:
-            return response.status
-
-async def webRequest():
-    await asyncio.sleep(5)
-    print('Making web request')
-
-    async with aiohttp.ClientSession() as session:
-        html = await fetch(session, 'http://localhost')
-        print(html)
-
 
 async def local_port_forward(ssh_target: str, ssh_port: int, ssh_username: str, local_host: str, local_port: int, id_file: str, remote_port: int, remote_host: str, debug):
     """
