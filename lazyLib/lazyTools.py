@@ -361,17 +361,37 @@ class SSHTools(object):
 
         return resultsDict
 
-    async def local_port_forward(self, local_host: str, local_port: int, remote_port: int, remote_host: str):
+    @staticmethod
+    async def local_port_forward(ssh_target: str, ssh_port: int, ssh_username: str, local_host: str, local_port: int,
+                                 id_file: str, remote_port: int, remote_host: str, debug: bool, start_event,
+                                 exit_event):
         """
         Function to spin up a local listener
+        :param ssh_target: IP address to connect to
         :param listen_host: The hostname or address on the local host to listen on
         :param local_port: The port to forward from. This is the first number in -L 8080:<remote_host>:80
         :param remote_port:  The port to forward to. This is the last number in `-L 8080:<remote_host>:80`
         :param remote_host: Target host. Can be localhost or something else the target can reach.
         """
-        async with asyncssh.connect(remote_host, username=self.username, port=self.port, known_hosts=self.known_hosts) as conn:
-            listener = await conn.forward_local_port(local_host, local_port, remote_host, remote_port)
-            click.echo('[*] Listening on port {}'.format(listener.get_port()))
+        if debug:
+            click.echo(
+                '[*] Attempting to connect to {} on port {} as user {} with SSH ID file {}'.format(ssh_target, ssh_port,
+                                                                                                   ssh_username,
+                                                                                                   id_file))
+
+        async with asyncssh.connect(host=ssh_target, username=ssh_username, port=ssh_port, known_hosts=None,
+                                    client_keys=[id_file]) as conn:
+            # print(remote_port)
+            # print(type(remote_port))
+            # raise click.Abort()
+            listener = await conn.forward_local_port('', local_port, remote_host, remote_port)
+            # click.echo('Listening on port {}'.format(listener.get_port()))
+            start_event.set()
+            await exit_event.wait()
+            if debug:
+                click.echo('[!] Tasks done. Closing tunnel.')
+            listener.close()
+            # await listener.wait_closed()
 
 
 

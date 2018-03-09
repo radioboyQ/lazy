@@ -273,12 +273,23 @@ def temp(ctx, section_name):
                         click.secho('[*] Connected to VPN', fg='green')
                 else:
                     raise click.Abort('The VPN does not appear to be connected. Try again after connecting to the VPN. ')
-        try:
-            tasks = asyncio.gather(local_port_forward(host, ssh_port, ssh_username, ssh_listen_interface, ssh_listen_port, id_file, gophish_port, gophish_interface, debug), webRequest())
 
+        # Create GoPhish instance
+        # go_connect = golib.golib(api_key, gophish_interface, gophish_port, verify=verify)
+
+        try:
+            start_event = asyncio.Event()
+            exit_event = asyncio.Event()
+            # Schedule all setup tasks
+            tasks = asyncio.gather(lazyTools.SSHTools.local_port_forward(host, ssh_port, ssh_username, ssh_listen_interface, ssh_listen_port, id_file, gophish_port, gophish_interface, debug, start_event, exit_event), asyncGoPhishClient.Gophish(config_options['gophish'][section_name.lower()]['api_key'], host='https://{hostname}:{port}'.format( hostname=config_options['gophish'][section_name.lower()]['Hostname'], port=config_options['gophish'][section_name.lower()]['Port']), verify=config_options['gophish'][section_name.lower()]['Verify_SSL']))
+            # tasks = asyncio.gather(asyncGoPhishClient.Gophish(config_options['gophish'][section_name.lower()]['api_key'], host='https://{hostname}:{port}'.format( hostname=config_options['gophish'][section_name.lower()]['Hostname'], port=config_options['gophish'][section_name.lower()]['Port']), verify=config_options['gophish'][section_name.lower()]['Verify_SSL']))
+
+            # Set up event loop
             event_loop = asyncio.get_event_loop()
 
+            # Start event loop
             event_loop.run_until_complete(tasks)
+
 
         except (OSError, asyncssh.Error) as exc:
             click.secho('SSH connection failed: {}'.format(str(exc)), fg='red')
@@ -293,28 +304,10 @@ def temp(ctx, section_name):
 
 def shutdown(loop):
     for task in asyncio.Task.all_tasks():
+        # pprint(task.all_tasks(loop=loop), indent=4)
+        # print(help(task))
         click.echo('[*] Canceling task.')
         task.cancel()
-
-async def local_port_forward(ssh_target: str, ssh_port: int, ssh_username: str, local_host: str, local_port: int, id_file: str, remote_port: int, remote_host: str, debug):
-    """
-    Function to spin up a local listener
-    :param ssh_target: IP address to connect to
-    :param listen_host: The hostname or address on the local host to listen on
-    :param local_port: The port to forward from. This is the first number in -L 8080:<remote_host>:80
-    :param remote_port:  The port to forward to. This is the last number in `-L 8080:<remote_host>:80`
-    :param remote_host: Target host. Can be localhost or something else the target can reach.
-    """
-    if debug:
-        click.echo('[*] Attempting to connect to {} on port {} as user {} with SSH ID file {}'.format(ssh_target, ssh_port, ssh_username, id_file ))
-
-    async with asyncssh.connect(host=ssh_target, username=ssh_username, port=ssh_port, known_hosts=None, client_keys=[id_file]) as conn:
-        # print(remote_port)
-        # print(type(remote_port))
-        # raise click.Abort()
-        listener = await conn.forward_local_port('', local_port, remote_host, remote_port)
-        click.echo('Listening on port {}'.format(listener.get_port()))
-        await listener.wait_closed()
 
 def listUsersInDict(group) -> list:
     """
