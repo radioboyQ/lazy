@@ -48,6 +48,11 @@ def TOMLConfigCTXImport(ctx):
 
     return TOMLConfigImport(multi_getattr(ctx, ('parent.' * ctx._depth) + 'params')['config_path'])
 
+def parentSetting(ctx, param):
+    """Return the given top level setting"""
+
+    return multi_getattr(ctx, ('parent.' * ctx._depth) + 'params')[param]
+
 def multi_getattr(obj, attr, default=None):
     """
     Get a named attribute from an object; multi_getattr(x, 'a.b.c.d') is
@@ -270,7 +275,6 @@ class SSHTools(object):
         """
 
         return os.path.getsize(filepath)
-
 
     async def upload_file(self, srcFilePath: str=None, destFilePath='.', progressBar: bool = True):
         """
