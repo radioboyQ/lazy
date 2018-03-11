@@ -110,6 +110,39 @@ def backup(ctx):
             s3.upload_fileobj(f, bucket_name, backup_filename)
     click.echo('[!] Done! \n')
 
+@cli.command('backup', help='Backup various files and folders I care about.', context_settings=CONTEXT_SETTINGS)
+@click.pass_context
+def backup(ctx):
+    backup_path = '/Users/scottfraser/Sites/Backups/'
+    backup_filename = 'personalAllFiles_{date}.zip'.format(date=arrow.utcnow().to('local').format('YYYY-MM-DD'))
+    backup_full = os.path.join(backup_path, backup_filename)
+
+
+    # List of data to archive
+    archive_paths = ['/Library/WebServer/Documents/dokuwiki/', '/Users/scottfraser/Library/Application Support/Google/Chrome/Default/Bookmarks', '/Users/scottfraser/.zshrc']
+
+    with zipfile.ZipFile(backup_full, 'w') as zipf:
+        for path in archive_paths:
+            click.echo('[*] Compressing data from {}'.format(path))
+            with zipfile.ZipFile(backup_full, 'w') as zipf:
+                if os.path.isdir(path):
+                    for root, dirs, files in os.walk(path):
+                        for file in files:
+                            zipf.write(os.path.join(root, file))
+                else:
+                    zipf.write(path)
+
+    # Let's use Amazon S3
+    s3 = boto3.client('s3')
+
+    bucket_name = 'local-wiki'
+
+    click.echo('[*] Uploading {} to bucket {} now.'.format(backup_full, bucket_name))
+    with click_spinner.spinner(beep=False):
+        with open(backup_full, 'rb') as f:
+            s3.upload_fileobj(f, bucket_name, backup_filename)
+    click.echo('[!] Done!')
+    
 @cli.command('maps', help='Open Google Maps with a specific user ID.', context_settings=CONTEXT_SETTINGS)
 @click.option('-i', '--id', help='User ID to open as.', default=1, type=click.INT)
 @click.pass_context
