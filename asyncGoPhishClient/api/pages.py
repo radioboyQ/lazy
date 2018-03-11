@@ -1,5 +1,5 @@
-from gophish.models import Page
-from gophish.api import APIEndpoint
+from asyncGoPhishClient.models import Page
+from asyncGoPhishClient.api import APIEndpoint
 
 class API(APIEndpoint):
     def __init__(self, api, endpoint='/api/pages/'):

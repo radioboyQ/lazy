@@ -1,7 +1,7 @@
 import json
 
-from gophish.models import Campaign, CampaignSummary, CampaignSummaries, CampaignResults, Error
-from gophish.api import APIEndpoint
+from asyncGoPhishClient.models import Campaign, CampaignSummary, CampaignSummaries, CampaignResults, Error
+from asyncGoPhishClient.api import APIEndpoint
 
 
 class API(APIEndpoint):

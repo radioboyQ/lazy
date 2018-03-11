@@ -1,4 +1,4 @@
-from gophish.models import Error
+from asyncGoPhishClient.models import Error
 '''
 api.py 
 

@@ -1,5 +1,5 @@
-from gophish.models import Template
-from gophish.api import APIEndpoint
+from asyncGoPhishClient.models import Template
+from asyncGoPhishClient.api import APIEndpoint
 
 class API(APIEndpoint):
     def __init__(self, api, endpoint='/api/templates/'):

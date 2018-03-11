@@ -391,9 +391,6 @@ class SSHTools(object):
             if debug:
                 click.echo('[!] Tasks done. Closing tunnel.')
             listener.close()
-            # await listener.wait_closed()
-
-
 
 
 class AsyncIOSSHAddingDuplicateCommandToResults(Exception):

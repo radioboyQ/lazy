@@ -9,7 +9,8 @@ import async_timeout
 import asyncio
 import asyncssh
 import click
-import asyncGoPhishClient
+# from asyncGoPhishClient import Gophish
+# from asyncGoPhishClient.models import *
 from gophish import Gophish
 from gophish.models import *
 import requests
@@ -255,7 +256,6 @@ def temp(ctx, section_name):
     id_file = config_options['gophish'][section_name.lower()]['id_file']
     verify = config_options['gophish'][section_name.lower()]['Verify_SSL']
 
-
     if section_name.lower() in config_options['gophish']:
 
         # Debug print statement to check if the section name was properly found
@@ -281,7 +281,7 @@ def temp(ctx, section_name):
             start_event = asyncio.Event()
             exit_event = asyncio.Event()
             # Schedule all setup tasks
-            tasks = asyncio.gather(lazyTools.SSHTools.local_port_forward(host, ssh_port, ssh_username, ssh_listen_interface, ssh_listen_port, id_file, gophish_port, gophish_interface, debug, start_event, exit_event), asyncGoPhishClient.Gophish(config_options['gophish'][section_name.lower()]['api_key'], host='https://{hostname}:{port}'.format( hostname=config_options['gophish'][section_name.lower()]['Hostname'], port=config_options['gophish'][section_name.lower()]['Port']), verify=config_options['gophish'][section_name.lower()]['Verify_SSL']))
+            tasks = asyncio.gather(lazyTools.SSHTools.local_port_forward(host, ssh_port, ssh_username, ssh_listen_interface, ssh_listen_port, id_file, gophish_port, gophish_interface, debug, start_event, exit_event), Gophish(config_options['gophish'][section_name.lower()]['api_key'], host='https://{hostname}:{port}'.format( hostname=config_options['gophish'][section_name.lower()]['Hostname'], port=config_options['gophish'][section_name.lower()]['Port']), verify=config_options['gophish'][section_name.lower()]['Verify_SSL']))
             # tasks = asyncio.gather(asyncGoPhishClient.Gophish(config_options['gophish'][section_name.lower()]['api_key'], host='https://{hostname}:{port}'.format( hostname=config_options['gophish'][section_name.lower()]['Hostname'], port=config_options['gophish'][section_name.lower()]['Port']), verify=config_options['gophish'][section_name.lower()]['Verify_SSL']))
 
             # Set up event loop
@@ -298,6 +298,9 @@ def temp(ctx, section_name):
             click.secho('[!] Keyboard interrupt caught, exiting!', bold=True)
             shutdown(event_loop)
             click.Abort()
+        # except Exception as e:
+        #     click.echo('{}'.format(e))
+        #     click.Abort()
 
     else:
         raise click.BadParameter('The section name \'{}\' doesn\'t appear to exist. Check the config file and try again.'.format(ctx.params['section_name']))

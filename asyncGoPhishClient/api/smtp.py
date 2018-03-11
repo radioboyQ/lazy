@@ -1,5 +1,5 @@
-from gophish.models import SMTP
-from gophish.api import APIEndpoint
+from asyncGoPhishClient.models import SMTP
+from asyncGoPhishClient.api import APIEndpoint
 
 class API(APIEndpoint):
     def __init__(self, api, endpoint='/api/smtp/'):

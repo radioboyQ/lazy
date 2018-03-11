@@ -1,7 +1,8 @@
 import asyncio
 import aiohttp
 
-from gophish.api import (campaigns, groups, pages, smtp, templates)
+# from gophish.api import (campaigns, groups, pages, smtp, templates)
+from asyncGoPhishClient.api import campaigns, groups, pages, smtp, templates
 
 DEFAULT_URL = 'http://localhost:3333'
 
