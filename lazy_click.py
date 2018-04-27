@@ -19,5 +19,9 @@ def nessus(server):
 def export_scan():
     print("Export Scans")
 
+
+def closeOutFunction():
+    click.echo('MECO Shutdown')
+
 if __name__ == '__main__':
     cli()
