@@ -13,10 +13,23 @@ from . import LazyCustomTypes
 # 3rd Party Libs
 import asyncssh
 import click
+from notifiers import get_notifier
 import requests
 import toml
 
 __version__ = '2.0'
+
+@click.pass_context
+def notifications(ctx):
+    config_options = TOMLConfigCTXImport(ctx)
+    token = config_options['pushover']['token']
+    user_token = config_options['pushover']['user']
+    p = get_notifier('pushover')
+
+    pprint(vars(ctx), indent=4)
+
+
+    # pprint(config_options, indent=4)
 
 def file_exist(path_in):
     """

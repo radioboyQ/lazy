@@ -58,8 +58,12 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option('--config-path', help='Specify a configuration file to use.', type=click.Path(exists=True, dir_okay=False, resolve_path=True, allow_dash=True), default='/Users/scottfraser/lazy.conf')
 @click.option('--debug', help='Enable debugging. -Work in progress-', is_flag=True, default=False)
 @click.option('-v', '--verbose', help='Enable verbosity', is_flag=True, default=False)
+@click.option('-n', '--notify', help='Send a Pushover notificaiton.', is_flag=True, default=False)
 @click.pass_context
-def cli(ctx, config_path, debug, verbose):
+def cli(ctx, config_path, debug, verbose, notify):
+
+    # if notify:
+    #     ctx.call_on_close(notifications)
 
     # Logging
     # Quiet down Requests logging
@@ -89,8 +93,6 @@ def cli(ctx, config_path, debug, verbose):
     ch.setFormatter(formatter)
     # add ch to logger
     logger.addHandler(ch)
-
-
 
 if __name__ == "__main__":
     cli()
