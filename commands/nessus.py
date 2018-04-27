@@ -195,6 +195,11 @@ def sslippycup(ctx, nessus_files, plugin_id):
 
     nessus_list = list()
 
+    notify = lazyTools.parentSetting(ctx, 'notify')
+
+    if notify:
+        ctx.call_on_close(lazyTools.notifications)
+
 
     for entry in nessus_files:
         if os.path.isfile(entry):
@@ -238,6 +243,58 @@ def sslippycup(ctx, nessus_files, plugin_id):
 
     for host_port in outlist:
         click.echo(host_port)
+
+@cli.command(name='live-host-count', short_help='Display all the hosts and ports with a valid SSL/TLS cert.')
+@click.argument('nessus_files', nargs=-1, type=click.Path(exists=True, file_okay=True, dir_okay=True, resolve_path=True,readable=True))
+@click.pass_context
+def livehostcount(ctx, nessus_files):
+    """
+    Display all the hosts and their ports associated to the given Nessus plugin ID.
+    """
+
+    outlist = list()
+
+    nessus_list = list()
+
+    hostname_list = list()
+
+    for entry in nessus_files:
+        if os.path.isfile(entry):
+            if entry.split('.')[-1:][0] == 'nessus':
+                nessus_list.append(os.path.split(entry))
+        elif os.path.isdir(entry):
+            for (dirpath, dirnames, filenames) in walk(entry):
+                for fn in filenames:
+                    if fn.split('.')[-1:][0] == 'nessus':
+                        nessus_list.append((dirpath, fn))
+
+    # Make sure we actually found a Nessus file to play with
+    if len(nessus_list) == 0:
+        click.secho('[!] No Nessus files were specified.', fg='red')
+        click.secho('[*] Exiting.', fg='green')
+        sys.exit()
+
+    for file in nessus_list:
+        nessus_file_path = os.path.join(file[0], file[1])
+        if os.path.isfile(nessus_file_path):
+            try:
+                tree = etree.parse(nessus_file_path)
+
+                root = tree.getroot()
+
+                for i in root.xpath('./Report/ReportHost'):
+                    hostname = i.attrib['name']
+                    hostname_list.append(hostname)
+
+                outlist = lazyTools.order_preserve_uniq_list(hostname_list)
+
+            except:
+                click.echo('An error occured, are you sure that you\'ve got a Nessus file?')
+                click.echo(sys.exc_info()[0])
+                sys.exit(1)
+
+    for host in outlist:
+        click.echo(host)
 
 
 

@@ -108,6 +108,10 @@ def mount_changer(share_location):
         err_str = '{}'.format(cmd_rtn.stderr.decode("utf-8"))
         return [False, err_str]
 
+def order_preserve_uniq_list(seq):
+    # Order preserving
+    seen = set()
+    return [x for x in seq if x not in seen and not seen.add(x)]
 
 class IPTools():
     """Class with IP address tools"""
