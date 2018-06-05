@@ -188,3 +188,5 @@ class EmpirePushover(object):
             # ToDo: Convert these statements to logging statements
             click.echo('[*] This is your Empire\'s configuration:')
             click.echo(pprint(response_json['config'], indent=4))
+
+

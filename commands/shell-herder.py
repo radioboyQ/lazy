@@ -5,7 +5,7 @@ import os
 import click
 
 # My library
-from lazyLib.EmpireShells import EmpirePushover
+from lazyLib.EmpireShellsLib import EmpirePushover
 
 # Logging
 # Quiet down Requests logging
@@ -65,6 +65,12 @@ def empire_notification(ctx, pushover_token, pushover_user, test, port, username
         empire_watcher.test()
     else:
         empire_watcher.start_watching()
+
+async def run_client():
+    async with asyncssh.connect('159.65.35.135', username='gpsadmin') as conn:
+        listener = await conn.forward_local_port('localhost', 3333, 'localhost', 3333)
+        print('Listening on port {}'.format(listener.get_port()))
+        await listener.wait_closed()
 
 
 if __name__ == "__main__":

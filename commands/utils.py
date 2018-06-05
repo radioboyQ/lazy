@@ -119,7 +119,7 @@ def backup(ctx):
 
 
     # List of data to archive
-    archive_paths = ['/Library/WebServer/Documents/dokuwiki/', '/Users/scottfraser/Library/Application Support/Google/Chrome/Default/Bookmarks', '/Users/scottfraser/.zshrc']
+    archive_paths = ['/Library/WebServer/Documents/dokuwiki/', '/Users/scottfraser/Library/Application Support/Google/Chrome/Default/Bookmarks', '/Users/scottfraser/.zshrc', '/Users/scottfraser/lazy.conf', '/Users/scottfraser/.ssh/config']
 
     with zipfile.ZipFile(backup_full, 'w') as zipf:
         for path in archive_paths:
