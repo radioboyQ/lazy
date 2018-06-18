@@ -1,4 +1,5 @@
 from notifiers import get_notifier
+import json
 import pendulum
 import requests
 from requests_html import HTMLSession
@@ -21,6 +22,7 @@ class n2yolib(object):
         self.pushover_app_token = pushover_app_token
         self.pushover_user_token = pushover_user_token
 
+
     def radio_pass(self, id, observer_lat, observer_lng, observer_alt, days, min_elevation):
         """
         Request passes for the next N days above N elevation.
@@ -40,7 +42,6 @@ class n2yolib(object):
         # return full_url
 
         return requests.get(full_url, verify=self.ssl_verify)
-
 
     def parse_pass_data(self, resp):
         """
@@ -150,8 +151,6 @@ class n2yolib(object):
 
         return dt
 
-
-
     def next_pass(self, sat_data):
         """
         Return list with the next passes listed that have a elevation greater than min_elevation
@@ -174,35 +173,39 @@ class n2yolib(object):
         """
         Return a string of the next num_passes human readable format
         """
+        final_list = list()
         next_passes = self.next_pass(sat_data)
+        current_epoch_time = pendulum.now(pendulum.now().timezone_name).int_timestamp
 
         for n in list(range(num_passes)):
-            # Format start time
-            dt_start = self.epoch_to_local(next_passes[n]["startUTC"])
-            dt_start_formatted = self.dt_format(dt_start)
-            # Max elevation
-            max_elevation = next_passes[n]["maxEl"]
-            # Duration
-            human_duration = self.epoch_to_utc(next_passes[n]["endUTC"]).diff_for_humans(self.epoch_to_utc(next_passes[n]["startUTC"]), absolute=True)
-            # Satellite Name
-            sat_name = next_passes[n]["name"]
+            if next_passes[n]["startUTC"] > current_epoch_time:
+                # Format start time
+                dt_start = self.epoch_to_local(next_passes[n]["startUTC"])
+                dt_start_formatted = self.dt_format(dt_start)
+                # Max elevation
+                max_elevation = next_passes[n]["maxEl"]
+                # Duration
+                human_duration = self.epoch_to_utc(next_passes[n]["endUTC"]).diff_for_humans(self.epoch_to_utc(next_passes[n]["startUTC"]), absolute=True)
+                # Satellite Name
+                sat_name = next_passes[n]["name"]
 
-            # Put it all together
-            return "{sat_name} will be overhead for {human_duration} with a height of {max_elevation} degrees, starting at {dt_start_formatted} / {non_military}".format(sat_name=sat_name, human_duration=human_duration, dt_start_formatted=dt_start_formatted, max_elevation=int(max_elevation), non_military=self.dt_format(dt_start, military=False))
+                # Put it all together
+                final_list.append("Starting on {dt_start_formatted}, {sat_name} will be overhead for {human_duration} with a height of {max_elevation} degrees.".format(sat_name=sat_name, human_duration=human_duration, dt_start_formatted=dt_start_formatted, max_elevation=int(max_elevation), non_military=self.dt_format(dt_start, military=False)))
 
+        return final_list
 
-    def pushover_notification(self, sat_data):
+    def pushover_notification(self, msg_str):
         """
-        Send a notification via Pushover when the next satellite is going to be overhead
+        Send a notification via Pushover
         """
+        # resp_error = self.p.notify(user=self.pushover_user_token, token=self.pushover_app_token, title="Satellite Prediction",message=msg_str).errors
 
+        # if resp_error is not None:
+            # return resp_error[0]
+        pass
 
-        msg_str = self.n_passes(sat_data)
-
-        self.p.notify(user=self.pushover_user_token, token=self.pushover_app_token, title="Satellite Prediction", message=msg_str)
-
-
-    def norad_sat_id_lookup(self, *sat_names):
+    @staticmethod
+    def norad_sat_id_lookup(sat_names):
         """
         Lookup NORAD ID number by name
         """
@@ -240,24 +243,11 @@ class n2yolib(object):
 
         return result_dict
 
-        # final_list = list()
-        # Parse all raw data into lists
-        # while len(sat_table_raw_list) >= 6:
-        #     row_list = list()
-        #     for i in range(0, 6):
-        #         row_list.append(sat_table_raw_list.pop(0))
-        #
-        #     # Only add the column's with date to final table. Ignore "Action" column
-        #     final_list.append(row_list[0:5])
-        #
-        #
-        # for sat_name in sat_names:
-        #     # Search each row for provided string
-        #     for row in final_list:
-        #         if sat_name.upper() in row[0]:
-        #             return_list.append(row)
-        #
-        # if len(return_list) >= 1:
-        #     return_list.insert(0, headers)
-        #
-        #     return return_list
+    @staticmethod
+    def norad_cache_refresh(cache_pth, sat_list):
+        """
+        Refresh the NORAD ID cache file
+        """
+        norad_id_dict = n2yolib.norad_sat_id_lookup(sat_list)
+        with open(cache_pth, 'w') as f:
+            json.dump(norad_id_dict, f)
