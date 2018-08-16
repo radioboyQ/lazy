@@ -55,7 +55,7 @@ class MyCLI(click.MultiCommand):
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 @click.group(context_settings=CONTEXT_SETTINGS, invoke_without_command=False, cls=MyCLI)
-@click.option('--config-path', help='Specify a configuration file to use.', type=click.Path(exists=True, dir_okay=False, resolve_path=True, allow_dash=True), default='/Users/radioboy/.lazy/lazy.conf')
+@click.option('--config-path', help='Specify a configuration file to use.', type=click.Path(exists=True, dir_okay=False, resolve_path=True, allow_dash=True), default='/home/radioboy/.lazy/lazy.conf')
 @click.option('--debug', help='Enable debugging. -Work in progress-', is_flag=True, default=False)
 @click.option('-v', '--verbose', help='Enable verbosity', is_flag=True, default=False)
 @click.option('-n', '--notify', help='Send a Pushover notificaiton.', is_flag=True, default=False)
