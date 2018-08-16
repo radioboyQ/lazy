@@ -1,8 +1,12 @@
+import asyncio
 import csv
 from pprint import pprint
 import json
+import sys
 
 # Third party Libraries
+import aiohttp
+import asyncssh
 import click
 from gophish import Gophish
 from gophish.models import *
@@ -220,6 +224,110 @@ def delete_campaign(ctx, campaign_prefix, section_name):
                             click.echo('[*] Deleting campaign {}'.format(c.name))
                         # pprint(vars(c), indent=4)
                         response = api.campaigns.delete(campaign_id=c.id)
+
+
+@cli.command('status', help='Show the status of specified campaign.', context_settings=CONTEXT_SETTINGS)
+@click.argument('campaign-name', type=click.STRING)
+@click.option('-s', '--section-name', help='Name of the config section to use.', type=click.STRING)
+@click.pass_context
+def status_campaign(ctx, campaign_name, section_name):
+    """
+    Show the status of the campaign provided
+
+    1) Get active config
+    2) SSH tunnel to box
+    3) Get campaign data
+    4) Print it out to screen
+    5) Profit
+    """
+
+    config_options = lazyTools.TOMLConfigCTXImport(ctx)
+
+    debug = ctx.parent.parent.params['debug']
+
+    if section_name.lower() in config_options['gophish']:
+
+        # Debug print statement to check if the section name was properly found
+        if debug:
+            click.secho('[*] Section name found in config file.', fg='green')
+
+        # Check if we need to be on the VPN
+        # if config_options['gophish'][section_name.lower()]['VPN_Required']:
+        #     # Skip VPN check if debug is True
+        #     if debug:
+        #         click.secho('[*] Skipping VPN check ')
+        #     else:
+        #         if lazyTools.ConnectedToVPN(ctx.parent.parent.params['config_path']):
+        #             # Connected to VPN
+        #             if debug:
+        #                 click.secho('[*] Connected to VPN', fg='green')
+        #         else:
+        #             click.secho('The VPN does not appear to be connected. Try again after connecting to the VPN. ')
+        #             raise click.Abort()
+
+            # Connect to GoPhish server
+            if debug:
+                click.echo('[*] Using hostname: https://{hostname}:{port}'.format(hostname=config_options['gophish'][section_name.lower()]['Hostname'], port=config_options['gophish'][section_name.lower()]['gophish_port']))
+                if config_options['gophish'][section_name.lower()]['Verify_SSL']:
+                    click.echo('[*] SSL connections will be verified.')
+                else:
+                    click.secho('[*] SSL connections will not be verified.', bold=True)
+
+            # Trying to use AIOHTTP instead of Gophish's library
+            # api = Gophish(config_options['gophish'][section_name.lower()]['api_key'], host='http://{hostname}:{port}'.format(hostname=config_options['gophish'][section_name.lower()]['Hostname'], port=config_options['gophish'][section_name.lower()]['gophish_port']), verify=config_options['gophish'][section_name.lower()]['Verify_SSL'])
+
+            tunnel_event = asyncio.Event()
+
+            loop = asyncio.get_event_loop()
+
+            tasks = asyncio.gather(run_client(config_options['gophish'][section_name.lower()]['ssh_username'], config_options['gophish'][section_name.lower()]['Hostname'], config_options['gophish'][section_name.lower()]['ssh_port'], config_options['gophish'][section_name.lower()]['ssh_listen_port'], config_options['gophish'][section_name.lower()]['gophish_port'], config_options['gophish'][section_name.lower()]['gophish_interface'], tunnel_event, config_options['gophish'][section_name.lower()]['id_file'], config_options['gophish'][section_name.lower()]['ssh_listen_interface'])) # ,
+                                    # get_campaign_data(config_options['gophish'][section_name.lower()]['gophish_interface'], config_options['gophish'][section_name.lower()]['gophish_port'], config_options['gophish'][section_name.lower()]['api_key'], tunnel_event))
+
+            try:
+                loop.run_until_complete(tasks)
+            except KeyboardInterrupt:
+                pass
+            finally:
+
+                click.secho("[!] Starting shutdown sequence.", fg="red")
+
+                # Find all running tasks
+                loop.stop()
+
+                pending = asyncio.Task.all_tasks()
+
+                loop.run_until_complete(asyncio.gather(*pending))
+
+                click.secho("[*] Shutdown complete.", fg="green")
+
+
+
+async def run_client(username, host, port, fwd_local_port, dest_remote_port, dest_remote_host, tunnel_event, client_keys, listen_interface="127.0.0.1"):
+    # Local port forward
+
+    try:
+        async with asyncssh.connect("45.79.100.105", username='sfraser', port=22, known_hosts=None, client_keys=[client_keys]) as conn:
+            listener = await conn.forward_remote_port(listen_interface, fwd_local_port, dest_remote_host, dest_remote_port)
+            await asyncio.sleep(1)
+            tunnel_event.set()
+            await listener.wait_closed()
+
+    except ConnectionRefusedError as e:
+        click.secho("[!] Connect failed with {}".format(e))
+
+async def get_campaign_data(hostname, port, api_key, tunnel_event):
+    """
+    AsyncIO way to get the current campaign status
+    """
+
+    # Wait for event to continue. This should fire after the tunnel has been built
+    await tunnel_event.wait()
+
+    params = {"api_key": api_key}
+    async with aiohttp.ClientSession() as session:
+        async with session.get('https://{hostname}:{port}'.format(hostname=hostname, port=port)) as resp:
+            print(resp.status)
+            print(await resp.text())
 
 
 def listUsersInDict(group) -> list:
