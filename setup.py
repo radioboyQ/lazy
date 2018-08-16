@@ -9,7 +9,7 @@ setup(
     author='Scott Fraser',
     author_email='quincy.fraser@gmail.com',
     url='https://github.com/radioboyQ/lazy',
-    packages=['commands', 'lazyLib', 'nessrest/nessrest'],
+    packages=['commands', 'lazyLib'],
     py_modules=['lazy'],
     entry_points='''
         [console_scripts]
