@@ -1,4 +1,5 @@
 import asyncio
+from collections import defaultdict
 from contextlib import suppress
 import csv
 from pprint import pprint
@@ -407,26 +408,24 @@ async def campaign_results(data):
     headers = ['Email Sent', 'Email Opened', 'Clicked Link', 'Submitted Data', 'Email Reported']
     table_list = list()
 
-    print("[*] Campaign Results Here:")
+    event_count = defaultdict(lambda: 0)
 
-    # print(data[2])
+    print("[*] Campaign Results Here:")
 
     for campaign in data[1]:
         if campaign['name'] == data[2]:
             campaign_status = campaign['status']
             campaign_id = campaign['id']
 
-            # pprint(campaign['timeline'])
-
             for r in campaign['timeline']:
-                if r['message'] in event_count:
-                    count = event_count[r['message']] + 1
+                event_count[r['message']] = event_count[r['message']] + 1
 
-                    event_count.update({r['message']: count})
-
-    for i in event_count:
-        table_list.append([i, event_count[i]])
-
+    for k, v in event_count.items():
+        # We know the campaign was created, skip it
+        if k == 'Campaign Created':
+            pass
+        else:
+            table_list.append([k, v])
 
     # Show table output
     print(tabulate(table_list, headers=headers, tablefmt='grid', numalign="center", stralign="center"))
