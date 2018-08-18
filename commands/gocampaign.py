@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import suppress
 import csv
 from pprint import pprint
 import json
@@ -228,9 +229,11 @@ def delete_campaign(ctx, campaign_prefix, section_name):
 
 @cli.command('status', help='Show the status of specified campaign.', context_settings=CONTEXT_SETTINGS)
 @click.argument('campaign-name', type=click.STRING)
-@click.option('-s', '--section-name', help='Name of the config section to use.', type=click.STRING)
+@click.option('-s', '--section-name', help='Name of the config section to use.', type=click.STRING, required=True)
+# @click.option('-i', '--campaign-id', help='Campaign ID number', required=True)
+@click.option('-o', '--open', help='Leave port forward open until canceled', type=bool, default=False, is_flag=True)
 @click.pass_context
-def status_campaign(ctx, campaign_name, section_name):
+def status_campaign(ctx, campaign_name, section_name, open):
     """
     Show the status of the campaign provided
 
@@ -245,7 +248,7 @@ def status_campaign(ctx, campaign_name, section_name):
 
     debug = ctx.parent.parent.params['debug']
 
-    if section_name.lower() in config_options['gophish']:
+    if section_name in config_options['gophish']:
 
         # Debug print statement to check if the section name was properly found
         if debug:
@@ -265,70 +268,174 @@ def status_campaign(ctx, campaign_name, section_name):
         #             click.secho('The VPN does not appear to be connected. Try again after connecting to the VPN. ')
         #             raise click.Abort()
 
-            # Connect to GoPhish server
-            if debug:
-                click.echo('[*] Using hostname: https://{hostname}:{port}'.format(hostname=config_options['gophish'][section_name.lower()]['Hostname'], port=config_options['gophish'][section_name.lower()]['gophish_port']))
-                if config_options['gophish'][section_name.lower()]['Verify_SSL']:
-                    click.echo('[*] SSL connections will be verified.')
-                else:
-                    click.secho('[*] SSL connections will not be verified.', bold=True)
+    # Connect to GoPhish server
+    if debug:
+        click.echo('[*] Using hostname: https://{hostname}:{port}'.format(hostname=config_options['gophish'][section_name.lower()]['Hostname'], port=config_options['gophish'][section_name.lower()]['gophish_port']))
+        if config_options['gophish'][section_name.lower()]['Verify_SSL'] and debug:
+            click.echo('[*] SSL connections will be verified.')
+        elif debug:
+            click.secho('[*] SSL connections will not be verified.', bold=True)
 
-            # Trying to use AIOHTTP instead of Gophish's library
-            # api = Gophish(config_options['gophish'][section_name.lower()]['api_key'], host='http://{hostname}:{port}'.format(hostname=config_options['gophish'][section_name.lower()]['Hostname'], port=config_options['gophish'][section_name.lower()]['gophish_port']), verify=config_options['gophish'][section_name.lower()]['Verify_SSL'])
+    # Trying to use AIOHTTP instead of Gophish's library
+    # api = Gophish(config_options['gophish'][section_name.lower()]['api_key'], host='http://{hostname}:{port}'.format(hostname=config_options['gophish'][section_name.lower()]['Hostname'], port=config_options['gophish'][section_name.lower()]['gophish_port']), verify=config_options['gophish'][section_name.lower()]['Verify_SSL'])
 
-            tunnel_event = asyncio.Event()
+    tunnel_event = asyncio.Event()
 
-            loop = asyncio.get_event_loop()
+    stop_tunnel = asyncio.Event()
 
-            tasks = asyncio.gather(run_client(config_options['gophish'][section_name.lower()]['ssh_username'], config_options['gophish'][section_name.lower()]['Hostname'], config_options['gophish'][section_name.lower()]['ssh_port'], config_options['gophish'][section_name.lower()]['ssh_listen_port'], config_options['gophish'][section_name.lower()]['gophish_port'], config_options['gophish'][section_name.lower()]['gophish_interface'], tunnel_event, config_options['gophish'][section_name.lower()]['id_file'], config_options['gophish'][section_name.lower()]['ssh_listen_interface'])) # ,
-                                    # get_campaign_data(config_options['gophish'][section_name.lower()]['gophish_interface'], config_options['gophish'][section_name.lower()]['gophish_port'], config_options['gophish'][section_name.lower()]['api_key'], tunnel_event))
+    loop = asyncio.get_event_loop()
 
-            try:
-                loop.run_until_complete(tasks)
-            except KeyboardInterrupt:
-                pass
-            finally:
+    tasks = [run_client(config_options['gophish'][section_name.lower()]['ssh_username'], config_options['gophish'][section_name.lower()]['Hostname'], config_options['gophish'][section_name.lower()]['ssh_port'], config_options['gophish'][section_name.lower()]['ssh_listen_port'], config_options['gophish'][section_name.lower()]['gophish_port'], config_options['gophish'][section_name.lower()]['gophish_interface'], tunnel_event, stop_tunnel, config_options['gophish'][section_name.lower()]['id_file'], debug, open, config_options['gophish'][section_name.lower()]['ssh_listen_interface'])]
 
-                click.secho("[!] Starting shutdown sequence.", fg="red")
+    resp_future = asyncio.ensure_future(get_campaign_data(config_options['gophish'][section_name.lower()]['gophish_interface'], config_options['gophish'][section_name.lower()]['gophish_port'], config_options['gophish'][section_name.lower()]['api_key'], tunnel_event, stop_tunnel,campaign_name, debug, verify_ssl=config_options['gophish'][section_name.lower()]['Verify_SSL']), loop=loop)
 
-                # Find all running tasks
-                loop.stop()
+    resp_future = add_success_callback(resp_future, campaign_results)
 
-                pending = asyncio.Task.all_tasks()
-
-                loop.run_until_complete(asyncio.gather(*pending))
-
-                click.secho("[*] Shutdown complete.", fg="green")
-
-
-
-async def run_client(username, host, port, fwd_local_port, dest_remote_port, dest_remote_host, tunnel_event, client_keys, listen_interface="127.0.0.1"):
-    # Local port forward
+    tasks.append(resp_future)
 
     try:
-        async with asyncssh.connect("45.79.100.105", username='sfraser', port=22, known_hosts=None, client_keys=[client_keys]) as conn:
-            listener = await conn.forward_remote_port(listen_interface, fwd_local_port, dest_remote_host, dest_remote_port)
+        done, _ = loop.run_until_complete(asyncio.wait(tasks))
+
+    except KeyboardInterrupt:
+        click.echo("")
+    finally:
+
+        # for t in asyncio.as_completed(tasks):
+        #     print(await t)
+
+        # Shutdown sequence
+        shutdown(loop, debug)
+
+
+
+async def run_client(username, host, port, fwd_local_port, dest_remote_port, dest_remote_host, tunnel_event, stop_tunnel, client_keys, debug=False, open=False, listen_interface="127.0.0.1"):
+    # Local port forward
+    try:
+        async with asyncssh.connect(host, username=username, port=port, known_hosts=None, client_keys=[client_keys]) as conn:
+            listener = await conn.forward_local_port(listen_interface, fwd_local_port, dest_remote_host, dest_remote_port)
+            if debug:
+                click.echo("[*] Connected!")
             await asyncio.sleep(1)
             tunnel_event.set()
-            await listener.wait_closed()
+
+            if open:
+                # If user wants to leave tunnel open, do it.
+                click.secho('[*] Tunnel left standing on local port {port}'.format(port=listener.get_port()), bold=True)
+                await listener.wait_closed()
+            else:
+                # If user doesn't want the tunnel to stay alive, kill it right away.
+                await stop_tunnel.wait()
+                listener.close()
 
     except ConnectionRefusedError as e:
         click.secho("[!] Connect failed with {}".format(e))
 
-async def get_campaign_data(hostname, port, api_key, tunnel_event):
+    except asyncio.CancelledError:
+        try:
+            if debug:
+                click.secho('[!] SSH Tunnel shutdown.', fg='red')
+                listener.close()
+        except:
+            pass
+
+async def get_campaign_data(hostname, port, api_key, tunnel_event, stop_tunnel, campaign_name, debug=False, verify_ssl=False):
     """
     AsyncIO way to get the current campaign status
     """
 
     # Wait for event to continue. This should fire after the tunnel has been built
     await tunnel_event.wait()
+    if debug:
+        click.echo("[*] Making web request.")
+
+    # Create connection object
+    conn = aiohttp.TCPConnector(verify_ssl=verify_ssl)
 
     params = {"api_key": api_key}
-    async with aiohttp.ClientSession() as session:
-        async with session.get('https://{hostname}:{port}'.format(hostname=hostname, port=port)) as resp:
-            print(resp.status)
-            print(await resp.text())
 
+
+    async with aiohttp.ClientSession(connector=conn) as session:
+        async with session.get('https://{hostname}:{port}/api/campaigns/'.format(hostname=hostname, port=port), params=params) as resp:
+
+            resp_json = await resp.json()
+
+            if debug:
+                click.echo("[*] Data obtained.")
+
+    # Wait 0.250 seconds for SSL connections to close
+    await asyncio.sleep(0.250)
+
+    # Let AsyncSSH know this coroutine is finished and the tunnel may be closed
+    stop_tunnel.set()
+
+    return resp, resp_json, campaign_name
+
+def shutdown(loop, debug):
+    """
+    Primitives to shutdown event loop properly
+    """
+    if debug:
+        click.secho("[!] Starting shutdown sequence.", fg="red")
+    else:
+        click.secho("[!] Starting shutdown sequence.")
+
+    # Find all running tasks
+    pending = asyncio.Task.all_tasks()
+
+    for task in pending:
+        task.cancel()
+
+        # Now we should await task to execute it's cancellation.
+        # Cancelled task raises asyncio.CancelledError that we can suppress:
+        with suppress(asyncio.CancelledError):
+            loop.run_until_complete(task)
+
+    # pprint(pending, indent=4)
+
+    loop.stop()
+
+    loop.close()
+
+    click.secho("[*] Shutdown complete.", fg="green", bold=True)
+
+async def campaign_results(data):
+    """
+    Print out the campaign results for the user
+    """
+    # User Status Header
+    event_count = {'Email Sent': 0, 'Email Opened': 0, 'Clicked Link': 0, 'Submitted Data': 0, 'Email Reported': 0}
+    headers = ['Email Sent', 'Email Opened', 'Clicked Link', 'Submitted Data', 'Email Reported']
+    table_list = list()
+
+    print("[*] Campaign Results Here:")
+
+    # print(data[2])
+
+    for campaign in data[1]:
+        if campaign['name'] == data[2]:
+            campaign_status = campaign['status']
+            campaign_id = campaign['id']
+
+            # pprint(campaign['timeline'])
+
+            for r in campaign['timeline']:
+                if r['message'] in event_count:
+                    count = event_count[r['message']] + 1
+
+                    event_count.update({r['message']: count})
+
+    for i in event_count:
+        table_list.append([i, event_count[i]])
+
+
+    # Show table output
+    print(tabulate(table_list, headers=headers, tablefmt='grid', numalign="center", stralign="center"))
+
+
+async def add_success_callback(fut, callback):
+    result = await fut
+    await callback(result)
+    return result
 
 def listUsersInDict(group) -> list:
     """
