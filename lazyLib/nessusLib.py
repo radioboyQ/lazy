@@ -18,8 +18,7 @@ class nessus6Lib(object):
     '''
     Scanner object
     '''
-    def __init__(self, url, login='', password='', api_akey='', api_skey='',
-                 insecure=False, ca_bundle=''):
+    def __init__(self, url, login='', password='', api_akey='', api_skey='', insecure=False, ca_bundle='', debug=False):
         self.api_akey = None
         self.api_skey = None
         self.use_api = False
@@ -69,6 +68,7 @@ class nessus6Lib(object):
         self.plugin_output = {}
         self.host_details = {}
         self.host_ids = {}
+        self.debug = debug
 
         if insecure and hasattr(requests, 'packages'):
             requests.packages.urllib3.disable_warnings()
