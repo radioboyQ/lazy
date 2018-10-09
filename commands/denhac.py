@@ -1,13 +1,45 @@
 import asyncio
+import logging
+from pathlib import Path
+from time import sleep
 
 import asyncssh
 import click
+import pendulum
+import requests
+from urllib3.exceptions import InsecureRequestWarning
+requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 
 # Lazy Lib
 from lazyLib import lazyTools
 
+from lazyLib.UVC_SyncLib import UVC_API_Sync
+
 __version__ = '1.0'
 
+def datetime_check(ctx, param, value):
+    """
+    Function to check the datetime input
+    """
+    if value is None:
+        if param.name is 'start_time':
+            raise click.BadParameter('You must provide a start time.')
+        elif param.name is 'end_time':
+            raise click.BadParameter('You must provide an end time.')
+        else:
+            raise click.BadParameter(f'I\' being called for {param.name} which is wrong. WTF MATE.')
+    try:
+        dt = pendulum.from_format(value, 'DD-MM-YYYY:HH:mm:ss', tz='UTC')
+
+        # Convert the datetime object to JavaScript Epoch time
+        return dt.int_timestamp * 1000
+    except:
+        if param.name is 'start_time':
+            raise click.BadParameter('Start datetime is not in the correct format.')
+        elif param.name is 'end_time':
+            raise click.BadParameter('End datetime is not in the correct format.')
+        else:
+            raise click.BadParameter(f'I\' being called for {param.name} which is wrong. WTF MATE.')
 
 async def run_client(host, uname, command):
     # print('Hostname: {}'.format(host))
@@ -86,3 +118,58 @@ def restart_odoo(ctx, server, cmd, username):
             print(i)
 
     click.echo(75 * '-')
+
+@click.command(name='download-videos', help='Download videos for cameras for a specific timeframe.', context_settings=CONTEXT_SETTINGS)
+@click.option('-s', '--start-time', callback=datetime_check, help='Specify a start time in DD:MM:YYYY-HH:mm')
+@click.option('-e', '--end-time', callback=datetime_check, help='Specify a start time in DD:MM:YYYY-HH:mm')
+@click.option('-u', '--username', help='Unifi Video username', required=True, default='choochoo', type=click.STRING)
+@click.option('-d', '--hostname', help='Domain name, hostname or IP address for the Video controller. E.g. 127.0.0.1', type=click.STRING, required=True)
+@click.option('-p', '--port', help='Port number for the Video controller. Defaults to 7443', default=7443, type=click.IntRange(1, 65535))
+@click.option('-o', '--output-dir', help='Directory to save the videos to.', type=click.Path(exists=False, file_okay=False, writable=True, resolve_path=True, allow_dash=True))
+@click.option('-p', '--password', help='UVC User\'s password.', prompt=True, hide_input=True)
+@click.argument('camera-names', nargs=-1)
+@click.pass_context
+def main(ctx, start_time, end_time, username, hostname, port, output_dir, password, camera_names):
+    # Create base logger
+    logger = logging.getLogger("UVC-DVR-Downloader")
+
+    console_log_level = 30
+
+    # Base logger
+    logger.setLevel(logging.DEBUG)
+
+    # Create console handler with a higher log level
+    ch = logging.StreamHandler()
+    ch.setLevel(console_log_level)
+
+    # Create log format
+    formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
+
+    # Set the format
+    ch.setFormatter(formatter)
+
+    # Add console handler to main logger
+    logger.addHandler(ch)
+
+    """
+    - Log into UVC
+    - Get Camera information
+    - Search for block of videos
+    - Download videos
+    """
+
+    client = UVC_API_Sync(hostname, port, username, password, logger, sleep_time=0)
+
+    raw_resp = client.login()
+
+    raw_resp = client.camera_info()
+
+    camera_id_list = client.camera_name(camera_names)
+
+    client.clip_search(epoch_start=start_time, epoch_end=end_time, camera_id_list=camera_id_list)
+
+    client.download_footage(Path(output_dir))
+
+    sleep(.2)
+
+    raw_resp = client.logout()
