@@ -139,48 +139,55 @@ def export(ctx, id, output_path, test, export_type, target, port, name):
             # Not connected to VPN
             raise click.ClickException('Not connected to corporate VPN.')
 
-    if ctx.obj['access_key'] and ctx.obj['secret_key']:
-        folderIDDict = dict()
-        scanIDDict = dict()
+    try:
+        pprint(ctx.obj, indent=4)
+        if ctx.obj['access_key'] and ctx.obj['secret_key']:
+            folderIDDict = dict()
+            scanIDDict = dict()
 
-        nessusAPI = ness6rest.Scanner(url=ctx.obj['target'], api_akey=ctx.obj['access_key'], api_skey=ctx.obj['secret_key'], debug=False)
+            nessusAPI = ness6rest(url=ctx.obj['target'], api_akey=ctx.obj['access_key'], api_skey=ctx.obj['secret_key'], debug=False)
 
-        scanFolderDict = nessusAPI.scan_list()
+            scanFolderDict = nessusAPI.list_scans()
 
-        click.secho('[*] Downloaded scan and folder data. Checking if provided ID is valid.')
+            click.secho('[*] Downloaded scan and folder data. Checking if provided ID is valid.')
 
-        # Get list of folder IDs
-        for folder in scanFolderDict['folders']:
-            folderIDDict.update({folder['id']: folder['name']})
+            # Get list of folder IDs
+            for folder in scanFolderDict['folders']:
+                folderIDDict.update({folder['id']: folder['name']})
 
-        # Get list of scan IDs
-        for scans in scanFolderDict['scans']:
-            scanIDDict.update({scans['id']:scans['name']})
-
-        # Check if ID is in scans list
-        if id in scanIDDict:
-            nessusAPI.scan_id = id
-            click.secho('[*] Downloading scan: {}'.format(scanIDDict[id]))
-            scanString = nessusAPI.download_scan(export_format=export_type)
-
-            click.secho('[*] Downloaded scan: {}'.format(scanIDDict[id]))
-            with open('{}.{}'.format(os.path.join(output_path, scanIDDict[id]), export_type), 'wb') as f:
-                f.write(scanString)
-            click.secho('[*] Saved {}.{} to disk.'.format(scanIDDict[id], export_type))
-        elif id in folderIDDict:
-            click.secho('[*] Downloading from folder {}'.format(folderIDDict[id]))
+            # Get list of scan IDs
             for scans in scanFolderDict['scans']:
-                if scans['folder_id'] == id:
-                    click.secho('[+] Downloading scan: {}'.format(scans['name']))
-                    nessusAPI.scan_id = scans['id']
-                    scanString = nessusAPI.download_scan(export_format=export_type)
+                scanIDDict.update({scans['id']:scans['name']})
 
-                    # click.secho('[*] Downloaded scan: {}'.format(scans['name']))
-                    with open('{}.{}'.format(os.path.join(output_path, scans['name']), export_type), 'wb') as f:
-                        f.write(scanString)
-                    click.secho('[*] Saved {}.{} to disk.'.format(scans['name'], export_type))
-        else:
-            raise click.BadParameter('{} is not a valid scan or folder number'.format(id))
+            # Check if ID is in scans list
+            if id in scanIDDict:
+                nessusAPI.scan_id = id
+                click.secho('[*] Downloading scan: {}'.format(scanIDDict[id]))
+                scanString = nessusAPI.download_scan(nessusAPI.scan_id, export_format=export_type)
+
+                click.secho('[*] Downloaded scan: {}'.format(scanIDDict[id]))
+                with open('{}.{}'.format(os.path.join(output_path, scanIDDict[id]), export_type), 'wb') as f:
+                    f.write(scanString)
+                click.secho('[*] Saved {}.{} to disk.'.format(scanIDDict[id], export_type))
+            elif id in folderIDDict:
+                click.secho('[*] Downloading from folder {}'.format(folderIDDict[id]))
+                for scans in scanFolderDict['scans']:
+                    if scans['folder_id'] == id:
+                        click.secho('[+] Downloading scan: {}'.format(scans['name']))
+                        nessusAPI.scan_id = scans['id']
+                        scanString = nessusAPI.download_scan(nessusAPI.scan_id, export_format=export_type)
+
+                        # click.secho('[*] Downloaded scan: {}'.format(scans['name']))
+                        with open('{}.{}'.format(os.path.join(output_path, scans['name']), export_type), 'wb') as f:
+                            f.write(scanString)
+                        click.secho('[*] Saved {}.{} to disk.'.format(scans['name'], export_type))
+            else:
+                raise click.BadParameter('{} is not a valid scan or folder number'.format(id))
+
+    except KeyError:
+        # Access_key or Secret_Key is missing
+        raise click.ClickException("Either the Secret Key or Access Key fields are missing from the conf file.")
+
 
 @cli.command(name='sslippycup', short_help='Display all the hosts and ports with a valid SSL/TLS cert.')
 @click.argument('nessus_files', nargs=-1, type=click.Path(exists=True, file_okay=True, dir_okay=True, resolve_path=True,readable=True))
