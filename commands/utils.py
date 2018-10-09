@@ -1,5 +1,6 @@
 import os
 from pprint import pprint
+from pathlib import Path
 import sys
 import zipfile
 
@@ -111,37 +112,28 @@ def backup(ctx):
     click.echo('[!] Done! \n')
 
 @cli.command('backup', help='Backup various files and folders I care about.', context_settings=CONTEXT_SETTINGS)
+@click.option('-s', '--server', help='Server profile to use', type=click.STRING, default='remote_apt_mirror')
 @click.pass_context
-def backup(ctx):
-    backup_path = '/Users/scottfraser/Sites/Backups/'
-    backup_filename = 'personalAllFiles_{date}.zip'.format(date=arrow.utcnow().to('local').format('YYYY-MM-DD'))
-    backup_full = os.path.join(backup_path, backup_filename)
+def backup(ctx, server):
+    """
+    Backup local files to Synology when on the home network
+    """
+    ssh_config = lazyTools.TOMLConfigCTXImport(ctx)['backup']
+
+    try:
+        server_config = ssh_config[server]
+    except KeyError:
+        raise click.ClickException('Invalid server configuration. Check the config file and try again.')
+
+    # Connect to NYC server with tunnel
+    vps = lazyTools.SSHTools(server_config['ssh_middle_user'], server_config['ssh_middle_host'])
+
+    vps.local_port_forward()
 
 
-    # List of data to archive
-    archive_paths = ['/Library/WebServer/Documents/dokuwiki/', '/Users/scottfraser/Library/Application Support/Google/Chrome/Default/Bookmarks', '/Users/scottfraser/.zshrc', '/Users/scottfraser/lazy.conf', '/Users/scottfraser/.ssh/config']
 
-    with zipfile.ZipFile(backup_full, 'w') as zipf:
-        for path in archive_paths:
-            click.echo('[*] Compressing data from {}'.format(path))
-            with zipfile.ZipFile(backup_full, 'w') as zipf:
-                if os.path.isdir(path):
-                    for root, dirs, files in os.walk(path):
-                        for file in files:
-                            zipf.write(os.path.join(root, file))
-                else:
-                    zipf.write(path)
 
-    # Let's use Amazon S3
-    s3 = boto3.client('s3')
 
-    bucket_name = 'local-wiki'
-
-    click.echo('[*] Uploading {} to bucket {} now.'.format(backup_full, bucket_name))
-    with click_spinner.spinner(beep=False):
-        with open(backup_full, 'rb') as f:
-            s3.upload_fileobj(f, bucket_name, backup_filename)
-    click.echo('[!] Done!')
 
 @cli.command('maps', help='Open Google Maps with a specific user ID.', context_settings=CONTEXT_SETTINGS)
 @click.option('-i', '--id', help='User ID to open as.', default=1, type=click.INT)
