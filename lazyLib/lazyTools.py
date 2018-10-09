@@ -409,6 +409,12 @@ class SSHTools(object):
                 click.echo('[!] Tasks done. Closing tunnel.')
             listener.close()
 
+    async def local_port_fwd(self, remote_host, remote_port):
+        """
+        Create a connection to the middle host for the remote host with a port forward
+        """
+        async with asyncssh.connect(host=self.host, username=self.username, port=self.port, known_hosts=None, client_keys=[id_file]) as conn:
+            pass
 
 class AsyncIOSSHAddingDuplicateCommandToResults(Exception):
     """Adding a duplicate command to the command list"""
