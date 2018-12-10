@@ -1,7 +1,9 @@
 import asyncio
 import csv
-import io
+from io import StringIO
 import os
+import logging
+from pathlib import Path
 from pprint import pprint
 import sys
 import subprocess
@@ -9,7 +11,8 @@ import subprocess
 import arrow
 import asyncssh
 import click
-from lxml import etree
+from lxml import etree, html
+import requests
 
 # My Junk
 from lazyLib import lazyTools
@@ -39,8 +42,7 @@ def cli(ctx):
 def report_name(ctx, client_short, user_initials, report_type):
     """
     Generate report names
-    Example report name: '{client_short}_{report_type}_{YYYY}-{MM}-{DD}_{user_initials}_v0.1.docx'
-    Example WSR: '{client_short}_WSR_{date}.docx'
+    Example report name: 'Coalfire Labs - [Client Name] - [Proj.Type {No Abbreviations}] - [Submission Date] - DRAFT.docx'
     """
 
     if report_type.upper() == 'WSR':
@@ -59,7 +61,7 @@ def nmap_parser(ctx, nmap_path):
 
     headers = ['Host', 'Port', 'Protocol', 'Application', 'Version']
 
-    output = io.StringIO()
+    output = StringIO()
     final_data = list()
 
     # Check if the file given is an XML file
@@ -96,57 +98,6 @@ def nmap_parser(ctx, nmap_path):
 
     else:
         raise click.BadOptionUsage('You can\'t use a folder just yet.', ctx=ctx)
-
-
-@cli.command(name='upload', context_settings=CONTEXT_SETTINGS, short_help='Upload/Push a project directory to QNAP')
-@click.argument('projects', type=click.STRING, nargs=-1)
-@click.option('-s', '--share-name', help='Name of the share from the config file.', default='QNAP', type=click.STRING)
-@click.option('-y', '--year', type=click.IntRange(2013, 2100), default=arrow.now().format('YYYY'), help='Pick a year after 2013. Default is the current year.')
-@click.pass_context
-def upload_qnap(ctx, projects, year, share_name):
-    """
-    Upload project directories to QNAP
-    - Check that the local *dir* exists
-    - Check if QNAP is mounted
-    - Copy local dir to QNAP folder
-    """
-    # ToDo: Add functionality to only upload Deliverables, Evidence, Administrative, or Retest
-
-    configOptions = lazyTools.TOMLConfigCTXImport(ctx)
-
-    remotePath = '/Volumes/ProServices/Projects/{year}/'.format(year=year)
-
-    sync_push_cmd = ["rsync", "-zarvhuW"]
-
-    for proj in projects:
-
-        fullPath = os.path.join(configOptions['local-config']['projects-folder'], proj)
-
-        if lazyTools.dir_exists(fullPath):
-            # Path exists locally
-
-            # Check if the share is mounted
-            share_status = os.path.ismount(configOptions['share'][share_name.lower()]['mount_point'])
-
-            if share_status == False:
-                click.secho('[!] The share isn\'t mounted. Mount it and try again.', fg='red')
-                sys.exit(1)
-
-            sync_push_cmd.append('fullPath')
-
-            try:
-                p = subprocess.Popen(sync_push_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                for lines in iter(p.stdout.readline, b''):
-                    for line in lines.split('\r'):
-                        print("[s] %s" % line.strip())
-            except Exception as e:
-                    click.secho('[!] Failed to upload.', fg='red')
-                    print(e)
-            finally:
-                click.secho('[*] Upload success.', fg='green')
-                
-        else:
-            raise click.BadArgumentUsage('The project folder {} doesn\'t exist!'.format(proj))
 
 
 @cli.command(name='test-setup', help='Sets up remote host for a pentest.')
@@ -216,5 +167,137 @@ def copy_id(ctx, host, password, port, username, id_file, authorized_keys_file):
 
     click.echo('[*] Uploaded your SSH keys successfully.')
 
-if __name__ == '__main__':
-    cli()
+@cli.command('desmond-ssh-update', help="Command to sync the local SSH config to the current status of the drones")
+@click.option('--debug', help="Debug flag", is_flag=True, default=False)
+@click.option('--verbose', help="Verbose flag", is_flag=True, default=False)
+@click.pass_context
+def desmond_ssh_update(ctx, debug, verbose):
+    """
+    Update SSH Config with the current status of the drones
+    """
+    """
+    - Parse Desmond page
+    - Read in the SSH config fileAIO-BlackHat-Scraping
+    """
+    logger = logging.getLogger("Desmond-Device-Parser")
+    if debug:
+        console_log_level = 10
+    elif verbose:
+        console_log_level = 20
+    else:
+        console_log_level = 30
+
+    def parse_desmond(desmond_url, timeout=5.0):
+        """
+        Parse Desmond HTML page
+        """
+        headers = ["Name", "Status", "Time Online", "IP", "Device Type", "Client Password"]
+        table_list = list()
+        output_fmt = list()
+        s = requests.Session()
+
+        ssh_cfg = """Host\tcoalfire-drone-{drone_name}
+        \t\tHostname\t\t{drone_ip}
+        \t\tPort\t\t\t22
+        \t\tUser\t\t\troot
+        \t\tIdentityFile\t~/.ssh/id_ed25519
+        \t\tStrictHostKeyChecking no
+        \t\tUserKnownHostsFile /dev/null
+        \t\tLocalForward 8834 127.0.0.1:8834
+        \t\tRemoteForward 3142 127.0.0.1:8888\n
+        \t\t# Forward port 80 and port 8000 to local Apache instance
+		\t\tRemoteForward 80 127.0.0.1:80
+		\t\tRemoteForward 8000 127.0.0.1:80"""
+
+        try:
+            logger.debug(f'Requesting the Desmond device\'s page from: {desmond_url}')
+            logger.debug(f'Using timeout {timeout}')
+            r = s.get(desmond_url, timeout=timeout)
+        except requests.exceptions.Timeout:
+            er_str = f"[!] Failed to connecto to Desmond at {desmond_url}, are you on the VPN?"
+            click.secho(er_str, fg="red")
+            logger.error(f"Desmond request timed out to {desmond_url}, server did not respond.")
+            raise click.Abort()
+        except requests.exceptions.ConnectionError:
+            er_str = f"[!] Failed to connect to Desmond at {desmond_url}. Check to ensure you\'re on the VPN."
+            click.secho(f"[!] Failed to connect to Desmond at {desmond_url}. Check to ensure you\'re on the VPN.",
+                        fg="red")
+            logger.debug(f"Connection failed. Is Desmond down? Are you on the VPN?")
+            raise click.Abort()
+        else:
+            # Check if the status isn't success
+            try:
+                r.raise_for_status()
+            except requests.exceptions.HTTPError:
+                click.secho(f"Received response code {r.status_code}.", fg="red")
+                raise click.Abort()
+            else:
+                # Everything worked, parse the HTML page
+                parsed = html.parse(StringIO(desmond_url))
+                root = parsed.getroot()
+                xpath_obj = root.xpath('/html/body/table/tbody')
+                pprint(xpath_obj)
+                # for i in root:
+                #     if i.tag == 'body':
+                #         for j in i:
+                #             if j.tag == 'table':
+                #                 for h in j:
+                #                     if h.tag == 'thead':
+                #                         pass
+                #                     elif h.tag == 'tbody':
+                #                         for k in h.getchildren():
+                #                             tmp_lst = list()
+                #                             for l in k.getchildren():
+                #                                 tmp_lst.append(l.text)
+                #                             table_list.append(tmp_lst)
+                # for i in table_list:
+                #     output_fmt.append(ssh_cfg.format(drone_name=i[0].lower(), drone_ip=i[3]))
+                #
+                # return output_fmt
+
+    def read_ssh_config(ssh_config_path):
+        """
+        Function to read the custom part of the SSH config file
+        Returns a list of lists representing the file
+        """
+        custom_ssh_config = list()
+
+        logger.debug(f"Using the SSH config file: {str(ssh_config_path)}")
+
+        with open(str(ssh_config_path), 'r') as f:
+            for line in f.readlines():
+                if line.startswith("#========================================="):
+                    break
+                else:
+                    # Reading the custom SSH config
+                    custom_ssh_config.append([line])
+        return custom_ssh_config
+
+    configOptions = lazyTools.TOMLConfigCTXImport(ctx)
+    # pprint(configOptions['desmond']['desmond_url'], indent=4)
+    # print(configOptions['desmond']['ssh_path'])
+
+    # Base logger
+    logger.setLevel(logging.DEBUG)
+    # Create console handler with a higher log level
+    ch = logging.StreamHandler()
+    ch.setLevel(console_log_level)
+    # Create log format
+    formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
+    # Set the format
+    ch.setFormatter(formatter)
+    # Add console handler to main logger
+    logger.addHandler(ch)
+
+    desmond_devices = parse_desmond(configOptions['desmond']['desmond_url'])
+
+    custom_ssh_config = read_ssh_config(Path(configOptions['desmond']['ssh_path']).expanduser())
+
+    # pprint(desmond_devices)
+
+
+
+    # pprint(custom_ssh_config)
+
+# if __name__ == "__main__":
+#     cli()

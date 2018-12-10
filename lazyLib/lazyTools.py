@@ -2,6 +2,7 @@
 import asyncio
 from ipaddress import IPv4Address, IPv6Address, IPv4Network, IPv6Network, ip_address, ip_network
 import os
+from pathlib import Path
 from pprint import pprint
 import subprocess
 import sys
@@ -51,8 +52,8 @@ def dir_exists(path_in):
 
 def TOMLConfigImport(filename):
     """Parse a TOML configuration file"""
-    with open(filename) as f:
-        config = toml.load(f)
+    filename = Path(filename).expanduser()
+    config = toml.load([str(filename)])
 
     return config
 
