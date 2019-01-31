@@ -131,6 +131,16 @@ def backup(ctx, server):
     vps.local_port_forward()
 
 
+@cli.command('udev-rename', help='Rename a network device using a generated string.')
+@click.option('-m', '--mac-addr', help='MAC address of device to be renamed')
+@click.option('-n', '--name', help='Name of the new device')
+@click.pass_context
+def udev_rename(ctx, mac_addr, name):
+    """
+    Generate a string for the udev conf to rename a network card
+    Template: SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*",ATTR"{address}"=={mac_addr},ATTR{dev_id}=="0x0", ATTR{type}=="1",KERNEL=="*", NAME="{name}"
+    """
+    click.echo(f'SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*",ATTR"{address}"=={mac_addr},ATTR{dev_id}=="0x0", ATTR{type}=="1",KERNEL=="*", NAME="{name}"')
 
 
 
