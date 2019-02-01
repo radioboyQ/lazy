@@ -143,18 +143,25 @@ def udev_rename(ctx, mac_addr, name, write, udev_path):
     dev_id = "{dev_id}"
     attr_type = "{type}"
     
-    udev_str = f'SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*",ATTR{address}=="{mac_addr}",ATTR{dev_id}=="0x0", ATTR{attr_type}=="1",KERNEL=="*", NAME="{name}"\n'
+    udev_str = 'SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*",ATTR{address}=="{mac_addr}",ATTR{dev_id}=="0x0", ATTR{attr_type}=="1",KERNEL=="*", NAME="{name}"'.format(address=address, mac_addr=mac_addr, dev_id=dev_id, attr_type=attr_type, name=name)
     
     # Append the string to udev config
-    # if write:
-        # if os.geteuid() != 0:
+    if write:
+        if os.geteuid() != 0:
             # click.echo("[*] Appending string to udev file. You may be prompted for your password")
             # python_sudo_cmd_str = f"from pathlib import Path; Path('{udev_path}').open('a').write('{udev_str}')"
             # print(python_sudo_cmd_str)
             # print("sudo", ["sudo"] + ["python3"] + ["-c"] + [python_sudo_cmd_str])
-            # subprocess.Popen(["sudo", "bash", "-c", f"echo {udev_str} >> {udev_path}"], shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    click.secho("[*] Run this command:", bold=True)
-    click.echo("echo 'SUBSYSTEM==\"net\", ACTION==\"add\", DRIVERS==\"?*\",ATTR{address}==\"a0:ce:c8:31:6e:cb\",ATTR{dev_id}==\"0x0\", ATTR{type}==\"1\",KERNEL==\"*\", NAME=\"usb-hub-silver\"' | sudo tee -a /etc/udev/rules.d/60-persistent-net.rules")
+            # p = subprocess.Popen(["sudo", "-S", f"echo {udev_str} >> {udev_path}"], shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            # pprint(p.communicate(), indent=4)
+            
+            # Temp solution
+            click.secho("[!] Rerun script with 'sudo'", bold=True, fg="blue")
+            click.secho("[*] OR run this command on your own:", bold=True, fg="green")
+            click.echo(f"echo '{udev_str}' | sudo tee -a /etc/udev/rules.d/60-persistent-net.rules")
+        elif os.geteuid() == 0:
+            Path(f'{udev_path}').open('a').write(f'{udev_str}')
+        
 
 
 @cli.command('maps', help='Open Google Maps with a specific user ID.', context_settings=CONTEXT_SETTINGS)
