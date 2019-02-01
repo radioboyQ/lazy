@@ -1,6 +1,7 @@
 import os
 from pprint import pprint
 from pathlib import Path
+import subprocess
 import sys
 import zipfile
 
@@ -134,15 +135,30 @@ def backup(ctx, server):
 @cli.command('udev-rename', help='Rename a network device using a generated string.')
 @click.option('-m', '--mac-addr', help='MAC address of device to be renamed')
 @click.option('-n', '--name', help='Name of the new device')
+@click.option('-w', '--write', help='Append string to udev file. This requires "sudo" privileges. *Not working!* ', is_flag=True, default=True)
+@click.option('-p', '--udev-path', help='Udev configuration file path. Default: /etc/udev/rules.d/60-persistent-net.rules', default="/etc/udev/rules.d/60-persistent-net.rules", type=click.Path(exists=True, dir_okay=False, writable=False, resolve_path=True, allow_dash=True))
 @click.pass_context
-def udev_rename(ctx, mac_addr, name):
+def udev_rename(ctx, mac_addr, name, write, udev_path):
     """
     Generate a string for the udev conf to rename a network card
-    Template: SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*",ATTR"{address}"=={mac_addr},ATTR{dev_id}=="0x0", ATTR{type}=="1",KERNEL=="*", NAME="{name}"
     """
-    click.echo(f'SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*",ATTR"{address}"=={mac_addr},ATTR{dev_id}=="0x0", ATTR{type}=="1",KERNEL=="*", NAME="{name}"')
-
-
+    # These are just here to get around some syntax requirements and fill in the strings when using f-strings
+    address = "{address}"
+    dev_id = "{dev_id}"
+    attr_type = "{type}"
+    
+    udev_str = f'SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*",ATTR{address}=="{mac_addr}",ATTR{dev_id}=="0x0", ATTR{attr_type}=="1",KERNEL=="*", NAME="{name}"\n'
+    
+    # Append the string to udev config
+    # if write:
+        # if os.geteuid() != 0:
+            # click.echo("[*] Appending string to udev file. You may be prompted for your password")
+            # python_sudo_cmd_str = f"from pathlib import Path; Path('{udev_path}').open('a').write('{udev_str}')"
+            # print(python_sudo_cmd_str)
+            # print("sudo", ["sudo"] + ["python3"] + ["-c"] + [python_sudo_cmd_str])
+            # subprocess.Popen(["sudo", "bash", "-c", f"echo {udev_str} >> {udev_path}"], shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    click.secho("[*] Run this command:", bold=True)
+    click.echo("echo 'SUBSYSTEM==\"net\", ACTION==\"add\", DRIVERS==\"?*\",ATTR{address}==\"a0:ce:c8:31:6e:cb\",ATTR{dev_id}==\"0x0\", ATTR{type}==\"1\",KERNEL==\"*\", NAME=\"usb-hub-silver\"' | sudo tee -a /etc/udev/rules.d/60-persistent-net.rules")
 
 
 @cli.command('maps', help='Open Google Maps with a specific user ID.', context_settings=CONTEXT_SETTINGS)
