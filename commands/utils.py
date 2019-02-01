@@ -76,10 +76,6 @@ def share(ctx, share_name, status):
                 # Mount the shared drive
                 click.secho('[*] Mounting the share.', fg='white')
                 click.launch(filled_path)
-
-
-
-
     else:
         raise click.BadParameter('The share name \'{}\' doesn\'t appear to exist. Check the config file and try again.'.format(ctx.params['share_name']))
 
