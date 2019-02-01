@@ -16,4 +16,4 @@ setup(
         lazy=lazy:cli
     ''',
     install_requires=['pendulum', 'boto3', 'gophish', 'aiohttp', 'lifxlan', 'tabulate', 'arrow', 'toml', 'notifiers', 'asyncssh', 'click', 'pytz', 'click_spinner', 'requests_html', 'cchardet', 'aiodns']
-     )
+)
