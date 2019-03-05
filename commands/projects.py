@@ -35,20 +35,26 @@ def cli(ctx):
 
 
 @cli.command(name='report-name', help='Generate proper report names. ')
-@click.option('-s', '--client-short', help='Client three letter abbreviation.', type=click.STRING, required=True)
-@click.option('-u', '--user-initials', help='User\'s three initials', type=click.STRING, default='SAF')
-@click.option('-t', '--report-type', help='The type of report to create', required=True)
+@click.option('-n', '--client-name', help='Client name', type=click.STRING, required=True)
+@click.option('-t', '--report-type', help='The type of report to create', default='draft', type=click.Choice(['draft', 'final']), required=True)
+@click.option('-p', '--project-type', help='Project type; Internal Penetration Test, Hardware Assessment, etc.', type=click.STRING, required=True)
 @click.pass_context
-def report_name(ctx, client_short, user_initials, report_type):
+def report_name(ctx, client_name, report_type, project_type):
     """
     Generate report names
     Example report name: 'Coalfire Labs - [Client Name] - [Proj.Type {No Abbreviations}] - [Submission Date] - DRAFT.docx'
     """
-
-    if report_type.upper() == 'WSR':
-        click.secho('{client_short}_{report_type}_{date}_Project_Status_Report.docx'.format(client_short=client_short.upper(), report_type=report_type.upper(), date=arrow.utcnow().to('local').format('YYYY-MM-DD')))
-    else:
-        click.secho('{client_short}_{report_type}_{date}_{user_initials}_v0.1.docx'.format(client_short=client_short.upper(), report_type=report_type.upper(), date=arrow.utcnow().to('local').format('YYYY-MM-DD'), user_initials=user_initials))
+    now = arrow.utcnow().to('local').format('YYYY-MM-DD')
+    if report_type == 'draft':
+        click.secho(f'Coalfire Labs - {client_name} - {project_type} - {now} - DRAFT.docx')
+    elif report_type == 'final':
+        click.secho(f'Coalfire Labs - {client_name} - {project_type} - {now} - FINAL.docx')
+    
+    
+    # if report_type.upper() == 'WSR':
+    #     click.secho('{client_short}_{report_type}_{date}_Project_Status_Report.docx'.format(client_short=client_short.upper(), report_type=report_type.upper(), date=arrow.utcnow().to('local').format('YYYY-MM-DD')))
+    # else:
+    #     click.secho('{client_short}_{report_type}_{date}_{user_initials}_v0.1.docx'.format(client_short=client_short.upper(), report_type=report_type.upper(), date=arrow.utcnow().to('local').format('YYYY-MM-DD'), user_initials=user_initials))
 
 
 @cli.command(name='nmap-service-parsing', context_settings=CONTEXT_SETTINGS, short_help='Parse a given Nmap file and output all accessable services')
