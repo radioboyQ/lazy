@@ -17,23 +17,26 @@ requests.packages.urllib3.disable_warnings()
 
 # define our default configuration options
 
-__version__ = '1.0'
+__version__ = "1.0"
 
 # Version information
-BANNER = """
+BANNER = (
+    """
 Lazy App v%s
 Sometimes writing code is easier than doing actual work.
 Written by Scott Fraser
-""" % __version__
+"""
+    % __version__
+)
 
-plugin_folder = os.path.join(os.path.dirname(__file__), 'commands')
+plugin_folder = os.path.join(os.path.dirname(__file__), "commands")
+
 
 class MyCLI(click.MultiCommand):
-
     def list_commands(self, ctx):
         rv = []
         for filename in os.listdir(plugin_folder):
-            if filename.endswith('.py'):
+            if filename.endswith(".py"):
                 rv.append(filename[:-3])
         rv.sort()
         return rv
@@ -44,21 +47,33 @@ class MyCLI(click.MultiCommand):
             return None
         elif len(matches) == 1:
             try:
-                mod = __import__('commands.' + matches[0], None, None, ['cli'])
+                mod = __import__("commands." + matches[0], None, None, ["cli"])
                 return mod.cli
             except ImportError as e:
-                click.secho('[!] A plugin failed to import. Error: {}\n'.format(e), fg='red')
+                click.secho(
+                    "[!] A plugin failed to import. Error: {}\n".format(e), fg="red"
+                )
                 return
-        ctx.fail('Too many matches: %s' % ', '.join(sorted(matches)))
+        ctx.fail("Too many matches: %s" % ", ".join(sorted(matches)))
 
 
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
-@click.group(context_settings=CONTEXT_SETTINGS, invoke_without_command=False, cls=MyCLI)
-@click.option('--config-path', help='Specify a configuration file to use.', type=click.Path(exists=True, dir_okay=False, resolve_path=True, allow_dash=True), default='/home/radioboy/.lazy/lazy.conf')
-@click.option('--debug', help='Enable debugging. -Work in progress-', is_flag=True, default=False)
-@click.option('-v', '--verbose', help='Enable verbosity', is_flag=True, default=False)
-@click.option('-n', '--notify', help='Send a Pushover notificaiton.', is_flag=True, default=False)
+
+@click.group(context_settings=CONTEXT_SETTINGS, invoke_without_command=True, cls=MyCLI)
+@click.option(
+    "--config-path",
+    help="Specify a configuration file to use.",
+    type=click.Path(exists=True, dir_okay=False, resolve_path=True, allow_dash=True),
+    default="/home/radioboy/.lazy/lazy.conf",
+)
+@click.option(
+    "--debug", help="Enable debugging. -Work in progress-", is_flag=True, default=False
+)
+@click.option("-v", "--verbose", help="Enable verbosity", is_flag=True, default=False)
+@click.option(
+    "-n", "--notify", help="Send a Pushover notificaiton.", is_flag=True, default=False
+)
 @click.pass_context
 def cli(ctx, config_path, debug, verbose, notify):
 
@@ -77,22 +92,27 @@ def cli(ctx, config_path, debug, verbose, notify):
     ch = logging.StreamHandler()
 
     # If verbose but not debug
-    if ctx.params['verbose'] == True and ctx.params['debug'] == False:
+    if ctx.params["verbose"] == True and ctx.params["debug"] == False:
         ch.setLevel(logging.INFO)
         # create formatter
-        formatter = logging.Formatter('%(levelname)s - %(message)s')
-    elif ctx.params['debug']:
+        formatter = logging.Formatter("%(levelname)s - %(message)s")
+    elif ctx.params["debug"]:
         ch.setLevel(logging.DEBUG)
         # Debug formatting
-        formatter = logging.Formatter('%(levelname)s - %(message)s \t %(filename)s \t %(funcName)s')
+        formatter = logging.Formatter(
+            "%(levelname)s - %(message)s \t %(filename)s \t %(funcName)s"
+        )
     else:
         ch.setLevel(logging.WARNING)
         # create formatter
-        formatter = logging.Formatter('%(levelname)s - %(message)s')
+        formatter = logging.Formatter("%(levelname)s - %(message)s")
     # add formatter to ch
     ch.setFormatter(formatter)
     # add ch to logger
     logger.addHandler(ch)
+
+    # pprint(vars(ctx))
+
 
 if __name__ == "__main__":
     cli()

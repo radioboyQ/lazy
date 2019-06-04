@@ -9,6 +9,7 @@ import sys
 import subprocess
 
 import arrow
+import aiodns
 import asyncssh
 import click
 from lxml import etree, html
@@ -18,12 +19,19 @@ import requests
 from lazyLib import lazyTools
 from lazyLib import LazyCustomTypes
 
-__version__ = '2.8'
+__version__ = "2.8"
 
 
-CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
-@click.group(name='projects', short_help='Useful project tools. Creating projects, naming reports, etc.', context_settings=CONTEXT_SETTINGS, invoke_without_command=False, cls=lazyTools.AliasedGroup)
+
+@click.group(
+    name="projects",
+    short_help="Useful project tools. Creating projects, naming reports, etc.",
+    context_settings=CONTEXT_SETTINGS,
+    invoke_without_command=False,
+    cls=lazyTools.AliasedGroup,
+)
 @click.pass_context
 def cli(ctx):
     """
@@ -34,66 +42,106 @@ def cli(ctx):
     pass
 
 
-@cli.command(name='report-name', help='Generate proper report names. ')
-@click.option('-n', '--client-name', help='Client name', type=click.STRING, required=True)
-@click.option('-t', '--report-type', help='The type of report to create', default='draft', type=click.Choice(['draft', 'final']), required=True)
-@click.option('-p', '--project-type', help='Project type; Internal Penetration Test, Hardware Assessment, etc.', type=click.STRING, required=True)
+@cli.command(name="report-name", help="Generate proper report names. ")
+@click.option(
+    "-n", "--client-name", help="Client name", type=click.STRING, required=True
+)
+@click.option(
+    "-t",
+    "--report-type",
+    help="The type of report to create",
+    default="draft",
+    type=click.Choice(["draft", "final"]),
+    required=True,
+)
+@click.option(
+    "-p",
+    "--project-type",
+    help="Project type; Internal Penetration Test, Hardware Assessment, etc.",
+    type=click.STRING,
+    required=True,
+)
 @click.pass_context
 def report_name(ctx, client_name, report_type, project_type):
     """
     Generate report names
     Example report name: 'Coalfire Labs - [Client Name] - [Proj.Type {No Abbreviations}] - [Submission Date] - DRAFT.docx'
     """
-    now = arrow.utcnow().to('local').format('YYYY-MM-DD')
-    if report_type == 'draft':
-        click.secho(f'Coalfire Labs - {client_name} - {project_type} - {now} - DRAFT.docx')
-    elif report_type == 'final':
-        click.secho(f'Coalfire Labs - {client_name} - {project_type} - {now} - FINAL.docx')
-    
-    
+    now = arrow.utcnow().to("local").format("YYYY-MM-DD")
+    if report_type == "draft":
+        click.secho(
+            f"Coalfire Labs - {client_name} - {project_type} - {now} - DRAFT.docx"
+        )
+    elif report_type == "final":
+        click.secho(
+            f"Coalfire Labs - {client_name} - {project_type} - {now} - FINAL.docx"
+        )
+
     # if report_type.upper() == 'WSR':
     #     click.secho('{client_short}_{report_type}_{date}_Project_Status_Report.docx'.format(client_short=client_short.upper(), report_type=report_type.upper(), date=arrow.utcnow().to('local').format('YYYY-MM-DD')))
     # else:
     #     click.secho('{client_short}_{report_type}_{date}_{user_initials}_v0.1.docx'.format(client_short=client_short.upper(), report_type=report_type.upper(), date=arrow.utcnow().to('local').format('YYYY-MM-DD'), user_initials=user_initials))
 
 
-@cli.command(name='nmap-service-parsing', context_settings=CONTEXT_SETTINGS, short_help='Parse a given Nmap file and output all accessable services')
-@click.option('-p', '--nmap-path', type=click.Path(exists=True, file_okay=True, dir_okay=True, readable=True, resolve_path=True, allow_dash=True), required=True)
+@cli.command(
+    name="nmap-service-parsing",
+    context_settings=CONTEXT_SETTINGS,
+    short_help="Parse a given Nmap file and output all accessable services",
+)
+@click.option(
+    "-p",
+    "--nmap-path",
+    type=click.Path(
+        exists=True,
+        file_okay=True,
+        dir_okay=True,
+        readable=True,
+        resolve_path=True,
+        allow_dash=True,
+    ),
+    required=True,
+)
 @click.pass_context
 def nmap_parser(ctx, nmap_path):
     """
     Parse a given nmap file into a nice table for Word with all given services and ports
     """
 
-    headers = ['Host', 'Port', 'Protocol', 'Application', 'Version']
+    headers = ["Host", "Port", "Protocol", "Application", "Version"]
 
     output = StringIO()
     final_data = list()
 
     # Check if the file given is an XML file
-    if os.path.isfile(nmap_path) and nmap_path.endswith('xml'):
+    if os.path.isfile(nmap_path) and nmap_path.endswith("xml"):
 
         tree = etree.parse(nmap_path)
 
         root = tree.getroot()
 
-        for h in root.xpath('./host'):
+        for h in root.xpath("./host"):
             for hostAttrib in h:
-                if hostAttrib.tag == 'address':
-                    addr = hostAttrib.attrib['addr']
-                elif hostAttrib.tag == 'ports':
+                if hostAttrib.tag == "address":
+                    addr = hostAttrib.attrib["addr"]
+                elif hostAttrib.tag == "ports":
                     for ports in hostAttrib:
-                        if ports.tag == 'port':
-                            protocol = ports.attrib['protocol']
-                            portNumber = ports.attrib['portid']
+                        if ports.tag == "port":
+                            protocol = ports.attrib["protocol"]
+                            portNumber = ports.attrib["portid"]
                             for service in ports:
-                                if service.tag == 'service':
-                                    application =service.attrib['name']
+                                if service.tag == "service":
+                                    application = service.attrib["name"]
                                     try:
-                                        version = service.attrib['product']
+                                        version = service.attrib["product"]
                                     except KeyError:
                                         version = ""
-                    data = {'Host': addr, 'Port': portNumber, 'Protocol': protocol, 'Application': application, 'Version': version}
+                    data = {
+                        "Host": addr,
+                        "Port": portNumber,
+                        "Protocol": protocol,
+                        "Application": application,
+                        "Version": version,
+                    }
                     final_data.append(data)
 
         writer = csv.DictWriter(output, headers)
@@ -103,15 +151,33 @@ def nmap_parser(ctx, nmap_path):
         click.secho(output.getvalue())
 
     else:
-        raise click.BadOptionUsage('You can\'t use a folder just yet.', ctx=ctx)
+        raise click.BadOptionUsage("You can't use a folder just yet.", ctx=ctx)
 
 
-@cli.command(name='test-setup', help='Sets up remote host for a pentest.')
-@click.argument('host', type=click.STRING)
-@click.option('-p', '--port', help='Port number to access jump box.', type=click.IntRange(1, 655535), default=2222)
-@click.option('-u', '--username', help='Username to log in.', type=click.STRING, default='root')
-@click.option('-c', '--cert', help='Cert to use for the connection.', type=click.Path(exists=True, file_okay=True, dir_okay=False, resolve_path=True, allow_dash=True), default='/Users/scottfraser/.ssh/known_hosts')
-@click.argument('cmd-file', type=click.Path(exists=True, dir_okay=False, resolve_path=True))
+@cli.command(name="test-setup", help="Sets up remote host for a pentest.")
+@click.argument("host", type=click.STRING)
+@click.option(
+    "-p",
+    "--port",
+    help="Port number to access jump box.",
+    type=click.IntRange(1, 655535),
+    default=2222,
+)
+@click.option(
+    "-u", "--username", help="Username to log in.", type=click.STRING, default="root"
+)
+@click.option(
+    "-c",
+    "--cert",
+    help="Cert to use for the connection.",
+    type=click.Path(
+        exists=True, file_okay=True, dir_okay=False, resolve_path=True, allow_dash=True
+    ),
+    default="/Users/scottfraser/.ssh/known_hosts",
+)
+@click.argument(
+    "cmd-file", type=click.Path(exists=True, dir_okay=False, resolve_path=True)
+)
 @click.pass_context
 def test_setup(ctx, host, port, username, cert, cmd_file):
     """
@@ -122,9 +188,9 @@ def test_setup(ctx, host, port, username, cert, cmd_file):
 
     cmd_list = list()
 
-    with open(cmd_file, 'r') as f:
+    with open(cmd_file, "r") as f:
         for l in f:
-            if l.startswith('#'):
+            if l.startswith("#"):
                 # Commented command in cmd_file
                 pass
             else:
@@ -132,50 +198,105 @@ def test_setup(ctx, host, port, username, cert, cmd_file):
 
     loop = asyncio.get_event_loop()
     try:
-        result_dict = loop.run_until_complete(ssh.single_client_multiple_commands(cmd_list))
+        result_dict = loop.run_until_complete(
+            ssh.single_client_multiple_commands(cmd_list)
+        )
     except (OSError, asyncssh.Error) as exc:
-        sys.exit('SSH connection failed: ' + str(exc))
+        sys.exit("SSH connection failed: " + str(exc))
 
     for host in result_dict:
         for cmd in result_dict[host]:
-            click.echo('Standard Out for {}: \n{}'.format(cmd, result_dict[host][cmd]['result_stdout']))
-            click.echo(75*'-')
-            click.echo('\n')
-            click.echo('Standard Error for {}: \n{}'.format(cmd, result_dict[host][cmd]['result_stderr']))
+            click.echo(
+                "Standard Out for {}: \n{}".format(
+                    cmd, result_dict[host][cmd]["result_stdout"]
+                )
+            )
+            click.echo(75 * "-")
+            click.echo("\n")
+            click.echo(
+                "Standard Error for {}: \n{}".format(
+                    cmd, result_dict[host][cmd]["result_stderr"]
+                )
+            )
 
 
-@cli.command(name='copy-id', help='Works like \'ssh-copy-id\' but works on other ports and is simpler.')
-@click.argument('host', type=click.STRING)
-@click.option('--password', prompt=True, hide_input=True, confirmation_prompt=False)
-@click.option('-p', '--port', help='Port number for remote server. Defaults to port 22', type=LazyCustomTypes.port, default=22)
-@click.option('-u', '--username', help='Username to log in.', type=click.STRING, default='root')
-@click.option('-i', '--id-file', help='ID file to copy. Defaults to \'~/.ssh/id_rsa.pub\'.', type=click.Path(exists=True, file_okay=True, dir_okay=False, resolve_path=True, allow_dash=True), default='{}/.ssh/id_rsa.pub'.format(os.environ['HOME']))
-@click.option('-a', '--authorized-keys-file', help='Location of the \'authorized_keys\' file on the remote host.', type=click.Path(exists=False, file_okay=True, dir_okay=False, resolve_path=False, allow_dash=True), default='~/.ssh/authorized_keys')
+@cli.command(
+    name="copy-id",
+    help="Works like 'ssh-copy-id' but works on other ports and is simpler.",
+)
+@click.argument("host", type=click.STRING)
+@click.option("--password", prompt=True, hide_input=True, confirmation_prompt=False)
+@click.option(
+    "-p",
+    "--port",
+    help="Port number for remote server. Defaults to port 22",
+    type=LazyCustomTypes.port,
+    default=22,
+)
+@click.option(
+    "-u", "--username", help="Username to log in.", type=click.STRING, default="root"
+)
+@click.option(
+    "-i",
+    "--id-file",
+    help="ID file to copy. Defaults to '~/.ssh/id_rsa.pub'.",
+    type=click.Path(
+        exists=True, file_okay=True, dir_okay=False, resolve_path=True, allow_dash=True
+    ),
+    default="{}/.ssh/id_rsa.pub".format(os.environ["HOME"]),
+)
+@click.option(
+    "-a",
+    "--authorized-keys-file",
+    help="Location of the 'authorized_keys' file on the remote host.",
+    type=click.Path(
+        exists=False,
+        file_okay=True,
+        dir_okay=False,
+        resolve_path=False,
+        allow_dash=True,
+    ),
+    default="~/.ssh/authorized_keys",
+)
 @click.pass_context
 def copy_id(ctx, host, password, port, username, id_file, authorized_keys_file):
     """
     Copies SSH ID file to a given host
     """
     # Commands to ensure that 'authorized_keys' is there
-    cmdList = ['mkdir -p $HOME/.ssh/; touch ~/.ssh/authorized_keys; chmod 644 ~/.ssh/authorized_keys']
+    cmdList = [
+        "mkdir -p $HOME/.ssh/; touch ~/.ssh/authorized_keys; chmod 644 ~/.ssh/authorized_keys"
+    ]
 
     # Create SSHTools instance
     ## Assume we are not using a cert to connect, just the password
-    ssh = lazyTools.SSHTools(username=username, host=host, port=port, password=password, known_hosts=None)
+    ssh = lazyTools.SSHTools(
+        username=username, host=host, port=port, password=password, known_hosts=None
+    )
 
     loop = asyncio.get_event_loop()
     try:
         for cmd in cmdList:
             results = loop.run_until_complete(ssh.run_client(cmd))
-        results = loop.run_until_complete(ssh.upload_file(srcFilePath=id_file, destFilePath=authorized_keys_file, progressBar=False))
+        results = loop.run_until_complete(
+            ssh.upload_file(
+                srcFilePath=id_file,
+                destFilePath=authorized_keys_file,
+                progressBar=False,
+            )
+        )
     except (OSError, asyncssh.Error) as exc:
-        sys.exit('[!] Operation failed: ' + str(exc))
+        sys.exit("[!] Operation failed: " + str(exc))
 
-    click.echo('[*] Uploaded your SSH keys successfully.')
+    click.echo("[*] Uploaded your SSH keys successfully.")
 
-@cli.command('desmond-ssh-update', help="Command to sync the local SSH config to the current status of the drones")
-@click.option('--debug', help="Debug flag", is_flag=True, default=False)
-@click.option('--verbose', help="Verbose flag", is_flag=True, default=False)
+
+@cli.command(
+    "desmond-ssh-update",
+    help="Command to sync the local SSH config to the current status of the drones",
+)
+@click.option("--debug", help="Debug flag", is_flag=True, default=False)
+@click.option("--verbose", help="Verbose flag", is_flag=True, default=False)
 @click.pass_context
 def desmond_ssh_update(ctx, debug, verbose):
     """
@@ -197,7 +318,14 @@ def desmond_ssh_update(ctx, debug, verbose):
         """
         Parse Desmond HTML page
         """
-        headers = ["Name", "Status", "Time Online", "IP", "Device Type", "Client Password"]
+        headers = [
+            "Name",
+            "Status",
+            "Time Online",
+            "IP",
+            "Device Type",
+            "Client Password",
+        ]
         table_list = list()
         output_fmt = list()
         s = requests.Session()
@@ -216,18 +344,22 @@ def desmond_ssh_update(ctx, debug, verbose):
 		\t\tRemoteForward 8000 127.0.0.1:80"""
 
         try:
-            logger.debug(f'Requesting the Desmond device\'s page from: {desmond_url}')
-            logger.debug(f'Using timeout {timeout}')
+            logger.debug(f"Requesting the Desmond device's page from: {desmond_url}")
+            logger.debug(f"Using timeout {timeout}")
             r = s.get(desmond_url, timeout=timeout)
         except requests.exceptions.Timeout:
             er_str = f"[!] Failed to connecto to Desmond at {desmond_url}, are you on the VPN?"
             click.secho(er_str, fg="red")
-            logger.error(f"Desmond request timed out to {desmond_url}, server did not respond.")
+            logger.error(
+                f"Desmond request timed out to {desmond_url}, server did not respond."
+            )
             raise click.Abort()
         except requests.exceptions.ConnectionError:
-            er_str = f"[!] Failed to connect to Desmond at {desmond_url}. Check to ensure you\'re on the VPN."
-            click.secho(f"[!] Failed to connect to Desmond at {desmond_url}. Check to ensure you\'re on the VPN.",
-                        fg="red")
+            er_str = f"[!] Failed to connect to Desmond at {desmond_url}. Check to ensure you're on the VPN."
+            click.secho(
+                f"[!] Failed to connect to Desmond at {desmond_url}. Check to ensure you're on the VPN.",
+                fg="red",
+            )
             logger.debug(f"Connection failed. Is Desmond down? Are you on the VPN?")
             raise click.Abort()
         else:
@@ -241,7 +373,7 @@ def desmond_ssh_update(ctx, debug, verbose):
                 # Everything worked, parse the HTML page
                 parsed = html.parse(StringIO(desmond_url))
                 root = parsed.getroot()
-                xpath_obj = root.xpath('/html/body/table/tbody')
+                xpath_obj = root.xpath("/html/body/table/tbody")
                 pprint(xpath_obj)
                 # for i in root:
                 #     if i.tag == 'body':
@@ -270,7 +402,7 @@ def desmond_ssh_update(ctx, debug, verbose):
 
         logger.debug(f"Using the SSH config file: {str(ssh_config_path)}")
 
-        with open(str(ssh_config_path), 'r') as f:
+        with open(str(ssh_config_path), "r") as f:
             for line in f.readlines():
                 if line.startswith("#========================================="):
                     break
@@ -289,21 +421,51 @@ def desmond_ssh_update(ctx, debug, verbose):
     ch = logging.StreamHandler()
     ch.setLevel(console_log_level)
     # Create log format
-    formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter("%(name)s - %(levelname)s - %(message)s")
     # Set the format
     ch.setFormatter(formatter)
     # Add console handler to main logger
     logger.addHandler(ch)
 
-    desmond_devices = parse_desmond(configOptions['desmond']['desmond_url'])
+    desmond_devices = parse_desmond(configOptions["desmond"]["desmond_url"])
 
-    custom_ssh_config = read_ssh_config(Path(configOptions['desmond']['ssh_path']).expanduser())
+    custom_ssh_config = read_ssh_config(
+        Path(configOptions["desmond"]["ssh_path"]).expanduser()
+    )
 
     # pprint(desmond_devices)
 
 
+@cli.command(
+    name="find-dcs",
+    context_settings=CONTEXT_SETTINGS,
+    short_help="Look up domain controllers on a remote network",
+)
+@click.option(
+    "-s",
+    "--dns-server",
+    help="DNS server to check against. If not defined, use system DNS instead.",
+)
+@click.argument("domain-name")
+@click.pass_context
+def find_dcs(ctx, dns_server, domain_name):
 
-    # pprint(custom_ssh_config)
+    record_type = "SRV"
+
+    loop = asyncio.get_event_loop()
+    if dns_server is None:
+        resolver = aiodns.DNSResolver(loop=loop)
+    else:
+        resolver = aiodns.DNSResolver(loop=loop, nameservers=[dns_server])
+
+    async def query(name, query_type):
+        return await resolver.query(name, query_type)
+
+    coro = query(f"_ldap._tcp.dc._msdcs.{domain_name}", record_type.upper())
+    result = loop.run_until_complete(coro)
+
+    pprint(result, indent=4)
+
 
 # if __name__ == "__main__":
 #     cli()

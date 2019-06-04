@@ -4,7 +4,7 @@ import aiohttp
 # from gophish.api import (campaigns, groups, pages, smtp, templates)
 from asyncGoPhishClient.api import campaigns, groups, pages, smtp, templates
 
-DEFAULT_URL = 'http://localhost:3333'
+DEFAULT_URL = "http://localhost:3333"
 
 
 class GophishClient(object):
@@ -25,9 +25,12 @@ class GophishClient(object):
 
         url = "{}{}".format(self.host, path)
         kwargs.update(self._client_kwargs)
-        async with aiohttp.request(method, url, params={"api_key": self.api_key}, **kwargs) as response:
+        async with aiohttp.request(
+            method, url, params={"api_key": self.api_key}, **kwargs
+        ) as response:
             # response = requests.request( method, url, params={"api_key": self.api_key}, **kwargs)
             return response
+
 
 class Gophish(object):
     def __init__(self, api_key, host=DEFAULT_URL, client=GophishClient, **kwargs):

@@ -1,11 +1,17 @@
 import json
 
-from asyncGoPhishClient.models import Campaign, CampaignSummary, CampaignSummaries, CampaignResults, Error
+from asyncGoPhishClient.models import (
+    Campaign,
+    CampaignSummary,
+    CampaignSummaries,
+    CampaignResults,
+    Error,
+)
 from asyncGoPhishClient.api import APIEndpoint
 
 
 class API(APIEndpoint):
-    def __init__(self, api, endpoint='/api/campaigns/'):
+    def __init__(self, api, endpoint="/api/campaigns/"):
         """ Creates a new instance of the campaigns API """
 
         super(API, self).__init__(api, endpoint=endpoint, cls=Campaign)
@@ -33,8 +39,7 @@ class API(APIEndpoint):
     def complete(self, campaign_id):
         """ Complete an existing campaign (Stop processing events) """
 
-        return super(API, self).get(
-            resource_id=campaign_id, resource_action='complete')
+        return super(API, self).get(resource_id=campaign_id, resource_action="complete")
 
     def summary(self, campaign_id=None):
         """ Returns the campaign summary """
@@ -47,13 +52,15 @@ class API(APIEndpoint):
 
         return super(API, self).get(
             resource_id=campaign_id,
-            resource_action='summary',
+            resource_action="summary",
             resource_cls=resource_cls,
-            single_resource=single_resource)
+            single_resource=single_resource,
+        )
 
     def results(self, campaign_id):
         """ Returns just the results for a given campaign """
         return super(API, self).get(
             resource_id=campaign_id,
-            resource_action='results',
-            resource_cls=CampaignResults)
+            resource_action="results",
+            resource_cls=CampaignResults,
+        )

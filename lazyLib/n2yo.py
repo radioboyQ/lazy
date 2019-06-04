@@ -6,9 +6,16 @@ from requests_html import HTMLSession
 
 import operator
 
-class n2yolib(object):
 
-    def __init__(self, api_key, pushover_app_token, pushover_user_token, ssl_verify=True, min_elevation=20):
+class n2yolib(object):
+    def __init__(
+        self,
+        api_key,
+        pushover_app_token,
+        pushover_user_token,
+        ssl_verify=True,
+        min_elevation=20,
+    ):
         """
         Init the class
         :param api_key: str
@@ -18,12 +25,13 @@ class n2yolib(object):
         self.ssl_verify = ssl_verify
         self.base_url = "https://www.n2yo.com/rest/v1/satellite/{stub}"
         self.min_elevation = float(min_elevation)
-        self.p = get_notifier('pushover')
+        self.p = get_notifier("pushover")
         self.pushover_app_token = pushover_app_token
         self.pushover_user_token = pushover_user_token
 
-
-    def radio_pass(self, id, observer_lat, observer_lng, observer_alt, days, min_elevation):
+    def radio_pass(
+        self, id, observer_lat, observer_lng, observer_alt, days, min_elevation
+    ):
         """
         Request passes for the next N days above N elevation.
         :param id: int
@@ -35,7 +43,15 @@ class n2yolib(object):
         :return: json
         """
 
-        stub_url = "radiopasses/{id}/{observer_lat}/{observer_lng}/{observer_alt}/{days}/{min_elevation}/&apiKey={api_key}".format(id=id, observer_lat=observer_lat, observer_lng=observer_lng, observer_alt=observer_alt, days=days, min_elevation=min_elevation, api_key=self.api_key)
+        stub_url = "radiopasses/{id}/{observer_lat}/{observer_lng}/{observer_alt}/{days}/{min_elevation}/&apiKey={api_key}".format(
+            id=id,
+            observer_lat=observer_lat,
+            observer_lng=observer_lng,
+            observer_alt=observer_alt,
+            days=days,
+            min_elevation=min_elevation,
+            api_key=self.api_key,
+        )
 
         full_url = self.base_url.format(stub=stub_url)
 
@@ -51,9 +67,15 @@ class n2yolib(object):
         """
 
         headers = list()
-        headers_dict = {"Satellite Name": "satname", "Max Elevation": "maxEl", "Start Time - Local": "startUTC",
-                        "End Time - Local": "endUTC", "Start Time - UTC": "startUTC", "End Time - UTC": "endUTC",
-                        "Duration": "null"}
+        headers_dict = {
+            "Satellite Name": "satname",
+            "Max Elevation": "maxEl",
+            "Start Time - Local": "startUTC",
+            "End Time - Local": "endUTC",
+            "Start Time - UTC": "startUTC",
+            "End Time - UTC": "endUTC",
+            "Duration": "null",
+        }
         for h in headers_dict:
             headers.append(h)
 
@@ -79,19 +101,23 @@ class n2yolib(object):
 
             # Start times
             dt = pendulum.from_timestamp(start_utc_epoch, tz=0)
-            final_row["Start Time - UTC"] = dt.format('YYYY MMMM DD - dddd - HH:mm:ss')
-            final_row["Start Time - Local"] = dt.in_timezone(pendulum.now().timezone_name).format(
-                'YYYY MMMM DD - dddd - HH:mm:ss')
+            final_row["Start Time - UTC"] = dt.format("YYYY MMMM DD - dddd - HH:mm:ss")
+            final_row["Start Time - Local"] = dt.in_timezone(
+                pendulum.now().timezone_name
+            ).format("YYYY MMMM DD - dddd - HH:mm:ss")
 
             # End times
             dt = pendulum.from_timestamp(end_utc_epoch, tz=0)
-            final_row["End Time - UTC"] = dt.format('YYYY MMMM DD - dddd - HH:mm:ss')
-            final_row["End Time - Local"] = dt.in_timezone(pendulum.now().timezone_name).format(
-                'YYYY MMMM DD - dddd - HH:mm:ss')
+            final_row["End Time - UTC"] = dt.format("YYYY MMMM DD - dddd - HH:mm:ss")
+            final_row["End Time - Local"] = dt.in_timezone(
+                pendulum.now().timezone_name
+            ).format("YYYY MMMM DD - dddd - HH:mm:ss")
 
             # Get Duration
             duration_seconds = end_utc_epoch - start_utc_epoch
-            final_row["Duration"] = pendulum.from_timestamp(duration_seconds).format('HH:mm:ss')
+            final_row["Duration"] = pendulum.from_timestamp(duration_seconds).format(
+                "HH:mm:ss"
+            )
 
             final_table.append(final_row)
 
@@ -121,9 +147,9 @@ class n2yolib(object):
         Format dt object to use DayName, 23:01:01 PM
         """
         if military:
-            return dt.format('dddd, hh:mm:ss A')
+            return dt.format("dddd, hh:mm:ss A")
         else:
-            return dt.format('dddd, HH:mm:ss')
+            return dt.format("dddd, HH:mm:ss")
 
     def seconds_to_start(self, raw_epoch):
         """
@@ -134,7 +160,9 @@ class n2yolib(object):
         dt = pendulum.from_timestamp(raw_epoch, tz=0)
 
         # Convert timezone from UTC to local time
-        epoch_pass_start_local = dt.in_timezone(pendulum.now().timezone_name).int_timestamp
+        epoch_pass_start_local = dt.in_timezone(
+            pendulum.now().timezone_name
+        ).int_timestamp
 
         epoch_now_local = pendulum.now().int_timestamp
 
@@ -163,7 +191,7 @@ class n2yolib(object):
             for p in sat_data[sat_name]["passes"]:
                 # Add sat name
                 p.update({"name": sat_name})
-                if p['maxEl'] > self.min_elevation:
+                if p["maxEl"] > self.min_elevation:
                     next_pass_list.append(p)
         next_pass_list = sorted(next_pass_list, key=operator.itemgetter("startUTC"))
 
@@ -185,12 +213,24 @@ class n2yolib(object):
                 # Max elevation
                 max_elevation = next_passes[n]["maxEl"]
                 # Duration
-                human_duration = self.epoch_to_utc(next_passes[n]["endUTC"]).diff_for_humans(self.epoch_to_utc(next_passes[n]["startUTC"]), absolute=True)
+                human_duration = self.epoch_to_utc(
+                    next_passes[n]["endUTC"]
+                ).diff_for_humans(
+                    self.epoch_to_utc(next_passes[n]["startUTC"]), absolute=True
+                )
                 # Satellite Name
                 sat_name = next_passes[n]["name"]
 
                 # Put it all together
-                final_list.append("Starting on {dt_start_formatted}, {sat_name} will be overhead for {human_duration} with a height of {max_elevation} degrees.".format(sat_name=sat_name, human_duration=human_duration, dt_start_formatted=dt_start_formatted, max_elevation=int(max_elevation), non_military=self.dt_format(dt_start, military=False)))
+                final_list.append(
+                    "Starting on {dt_start_formatted}, {sat_name} will be overhead for {human_duration} with a height of {max_elevation} degrees.".format(
+                        sat_name=sat_name,
+                        human_duration=human_duration,
+                        dt_start_formatted=dt_start_formatted,
+                        max_elevation=int(max_elevation),
+                        non_military=self.dt_format(dt_start, military=False),
+                    )
+                )
 
         return final_list
 
@@ -201,7 +241,7 @@ class n2yolib(object):
         # resp_error = self.p.notify(user=self.pushover_user_token, token=self.pushover_app_token, title="Satellite Prediction",message=msg_str).errors
 
         # if resp_error is not None:
-            # return resp_error[0]
+        # return resp_error[0]
         pass
 
     @staticmethod
@@ -215,13 +255,13 @@ class n2yolib(object):
 
         session = HTMLSession()
 
-        r = session.get('https://www.n2yo.com/satellites/?c=3')
+        r = session.get("https://www.n2yo.com/satellites/?c=3")
 
-        r.html.find('#categoriestab', first=True)
+        r.html.find("#categoriestab", first=True)
 
-        weather = r.html.find('#categoriestab', first=True)
+        weather = r.html.find("#categoriestab", first=True)
 
-        sat_table_raw_list = list(weather.text.split('\n'))
+        sat_table_raw_list = list(weather.text.split("\n"))
 
         sat_table_raw_list.remove("[minutes]")
 
@@ -249,5 +289,5 @@ class n2yolib(object):
         Refresh the NORAD ID cache file
         """
         norad_id_dict = n2yolib.norad_sat_id_lookup(sat_list)
-        with open(cache_pth, 'w') as f:
+        with open(cache_pth, "w") as f:
             json.dump(norad_id_dict, f)

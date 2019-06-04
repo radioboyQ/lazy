@@ -41,20 +41,20 @@ class Model(object):
 
 class Campaign(Model):
     _valid_properties = {
-        'id': None,
-        'name': None,
-        'created_date': datetime.now(tzlocal()),
-        'launch_date': datetime.now(tzlocal()),
-        'completed_date': None,
-        'template': None,
-        'page': None,
-        'results': [],
-        'status': None,
-        'timeline': [],
-        'smtp': None,
-        'url': None,
-        'groups': [],
-        'profile': None
+        "id": None,
+        "name": None,
+        "created_date": datetime.now(tzlocal()),
+        "launch_date": datetime.now(tzlocal()),
+        "completed_date": None,
+        "template": None,
+        "page": None,
+        "results": [],
+        "status": None,
+        "timeline": [],
+        "smtp": None,
+        "url": None,
+        "groups": [],
+        "profile": None,
     }
 
     def __init__(self, **kwargs):
@@ -67,18 +67,18 @@ class Campaign(Model):
         campaign = cls()
         for key, val in json.items():
             # TODO Add date parsing
-            if key == 'results':
+            if key == "results":
                 results = [Result.parse(result) for result in val]
                 setattr(campaign, key, results)
-            elif key == 'timeline':
+            elif key == "timeline":
                 if val is not None:
                     timeline = [TimelineEntry.parse(entry) for entry in val]
                     setattr(campaign, key, timeline)
-            elif key == 'template':
+            elif key == "template":
                 setattr(campaign, key, Template.parse(val))
-            elif key == 'page':
+            elif key == "page":
                 setattr(campaign, key, Page.parse(val))
-            elif key == 'smtp':
+            elif key == "smtp":
                 setattr(campaign, key, SMTP.parse(val))
             elif key in cls._valid_properties:
                 setattr(campaign, key, val)
@@ -86,8 +86,9 @@ class Campaign(Model):
 
 
 class CampaignSummaries(Model):
-    ''' Represents a list of campaign summary objects '''
-    _valid_properties = {'total': None, 'campaigns': None}
+    """ Represents a list of campaign summary objects """
+
+    _valid_properties = {"total": None, "campaigns": None}
 
     def __init__(self):
         """ Creates a new instance of the campaign summaries"""
@@ -99,7 +100,7 @@ class CampaignSummaries(Model):
         campaign_summaries = cls()
         for key, val in json.items():
             # TODO Add date parsing
-            if key == 'campaigns':
+            if key == "campaigns":
                 summaries = [CampaignSummary.parse(summary) for summary in val]
                 setattr(campaign_summaries, key, summaries)
             elif key in cls._valid_properties:
@@ -108,15 +109,16 @@ class CampaignSummaries(Model):
 
 
 class CampaignSummary(Model):
-    ''' Represents a campaign summary object '''
+    """ Represents a campaign summary object """
+
     _valid_properties = {
-        'id': None,
-        'name': None,
-        'status': None,
-        'created_date': None,
-        'launch_date': None,
-        'completed_date': None,
-        'stats': None
+        "id": None,
+        "name": None,
+        "status": None,
+        "created_date": None,
+        "launch_date": None,
+        "completed_date": None,
+        "stats": None,
     }
 
     def __init__(self):
@@ -128,7 +130,7 @@ class CampaignSummary(Model):
         summary = cls()
         for key, val in json.items():
             # TODO Add date parsing
-            if key == 'stats':
+            if key == "stats":
                 stats = Stat.parse(val)
                 setattr(summary, key, stats)
             elif key in cls._valid_properties:
@@ -138,12 +140,12 @@ class CampaignSummary(Model):
 
 class Stat(Model):
     _valid_properties = {
-        'total': None,
-        'sent': None,
-        'opened': None,
-        'clicked': None,
-        'submitted_data': None,
-        'error': None
+        "total": None,
+        "sent": None,
+        "opened": None,
+        "clicked": None,
+        "submitted_data": None,
+        "error": None,
     }
 
     def __init__(self):
@@ -160,13 +162,14 @@ class Stat(Model):
 
 
 class CampaignResults(Model):
-    ''' Represents a succinct view of campaign results '''
+    """ Represents a succinct view of campaign results """
+
     _valid_properties = {
-        'id': None,
-        'name': None,
-        'results': [],
-        'status': None,
-        'timeline': [],
+        "id": None,
+        "name": None,
+        "results": [],
+        "status": None,
+        "timeline": [],
     }
 
     def __init__(self, **kwargs):
@@ -179,10 +182,10 @@ class CampaignResults(Model):
         campaign_results = cls()
         for key, val in json.items():
             # TODO Add date parsing
-            if key == 'results':
+            if key == "results":
                 results = [Result.parse(result) for result in val]
                 setattr(campaign_results, key, results)
-            elif key == 'timeline':
+            elif key == "timeline":
                 if val is not None:
                     timeline = [TimelineEntry.parse(entry) for entry in val]
                     setattr(campaign_results, key, timeline)
@@ -193,15 +196,15 @@ class CampaignResults(Model):
 
 class Result(Model):
     _valid_properties = {
-        'id': None,
-        'first_name': None,
-        'last_name': None,
-        'email': None,
-        'position': None,
-        'ip': None,
-        'latitude': None,
-        'longitude': None,
-        'status': None
+        "id": None,
+        "first_name": None,
+        "last_name": None,
+        "email": None,
+        "position": None,
+        "ip": None,
+        "latitude": None,
+        "longitude": None,
+        "status": None,
     }
 
     def __init__(self, **kwargs):
@@ -218,15 +221,10 @@ class Result(Model):
 
 
 class TimelineEntry(Model):
-    _valid_properties = {
-        'email': None,
-        'time': None,
-        'message': None,
-        'details': None
-    }
+    _valid_properties = {"email": None, "time": None, "message": None, "details": None}
 
     def __init__(self):
-        ''' Creates a new instance of a timeline entry '''
+        """ Creates a new instance of a timeline entry """
         for key, default in TimelineEntry._valid_properties.items():
             setattr(self, key, default)
 
@@ -234,7 +232,7 @@ class TimelineEntry(Model):
     def parse(cls, json):
         entry = cls()
         for key, val in json.items():
-            if key == 'details' and val != "":
+            if key == "details" and val != "":
                 details = _json.loads(val)
                 setattr(entry, key, details)
             elif key in cls._valid_properties:
@@ -245,12 +243,13 @@ class TimelineEntry(Model):
 class User(Model):
     """ User contains the attributes for a member of a group
         used in Gophish """
+
     _valid_properties = {
-        'id': None,
-        'first_name': None,
-        'last_name': None,
-        'email': None,
-        'position': None
+        "id": None,
+        "first_name": None,
+        "last_name": None,
+        "email": None,
+        "position": None,
     }
 
     def __init__(self, **kwargs):
@@ -268,11 +267,12 @@ class User(Model):
 
 class Group(Model):
     """ Groups contain one or more users """
+
     _valid_properties = {
-        'id': None,
-        'name': None,
-        'modified_date': datetime.now(tzlocal()),
-        'targets': []
+        "id": None,
+        "name": None,
+        "modified_date": datetime.now(tzlocal()),
+        "targets": [],
     }
 
     def __init__(self, **kwargs):
@@ -283,10 +283,10 @@ class Group(Model):
     def parse(cls, json):
         group = cls()
         for key, val in json.items():
-            if key == 'targets':
+            if key == "targets":
                 targets = [User.parse(user) for user in val]
                 setattr(group, key, targets)
-            elif key == 'modified_date':
+            elif key == "modified_date":
                 setattr(group, key, parse_date(val))
             elif key in cls._valid_properties:
                 setattr(group, key, val)
@@ -295,13 +295,13 @@ class Group(Model):
 
 class SMTP(Model):
     _valid_properties = {
-        'id': None,
-        'interface_type': 'SMTP',
-        'name': None,
-        'host': None,
-        'from_address': None,
-        'ignore_cert_errors': False,
-        'modified_date': datetime.now(tzlocal())
+        "id": None,
+        "interface_type": "SMTP",
+        "name": None,
+        "host": None,
+        "from_address": None,
+        "ignore_cert_errors": False,
+        "modified_date": datetime.now(tzlocal()),
     }
 
     def __init__(self, **kwargs):
@@ -312,7 +312,7 @@ class SMTP(Model):
     def parse(cls, json):
         smtp = cls()
         for key, val in json.items():
-            if key == 'modified_date':
+            if key == "modified_date":
                 setattr(smtp, key, parse_date(val))
             elif key in cls._valid_properties:
                 setattr(smtp, key, val)
@@ -321,13 +321,13 @@ class SMTP(Model):
 
 class Template(Model):
     _valid_properties = {
-        'id': None,
-        'name': None,
-        'text': None,
-        'html': None,
-        'modified_date': datetime.now(tzlocal()),
-        'subject': None,
-        'attachments': []
+        "id": None,
+        "name": None,
+        "text": None,
+        "html": None,
+        "modified_date": datetime.now(tzlocal()),
+        "subject": None,
+        "attachments": [],
     }
 
     def __init__(self, **kwargs):
@@ -338,12 +338,10 @@ class Template(Model):
     def parse(cls, json):
         template = cls()
         for key, val in json.items():
-            if key == 'modified_date':
+            if key == "modified_date":
                 setattr(template, key, parse_date(val))
-            elif key == 'attachments':
-                attachments = [
-                    Attachment.parse(attachment) for attachment in val
-                ]
+            elif key == "attachments":
+                attachments = [Attachment.parse(attachment) for attachment in val]
                 setattr(template, key, attachments)
             elif key in cls._valid_properties:
                 setattr(template, key, val)
@@ -352,13 +350,13 @@ class Template(Model):
 
 class Page(Model):
     _valid_properties = {
-        'id': None,
-        'name': None,
-        'html': None,
-        'modified_date': datetime.now(tzlocal()),
-        'capture_credentials': False,
-        'capture_passwords': False,
-        'redirect_url': None
+        "id": None,
+        "name": None,
+        "html": None,
+        "modified_date": datetime.now(tzlocal()),
+        "capture_credentials": False,
+        "capture_passwords": False,
+        "redirect_url": None,
     }
 
     def __init__(self, **kwargs):
@@ -369,7 +367,7 @@ class Page(Model):
     def parse(cls, json):
         page = cls()
         for key, val in json.items():
-            if key == 'modified_date':
+            if key == "modified_date":
                 setattr(page, key, parse_date(val))
             elif key in cls._valid_properties:
                 setattr(page, key, val)
@@ -377,7 +375,7 @@ class Page(Model):
 
 
 class Attachment(Model):
-    _valid_properties = {'content': None, 'type': None, 'name': None}
+    _valid_properties = {"content": None, "type": None, "name": None}
 
     @classmethod
     def parse(cls, json):
@@ -389,7 +387,7 @@ class Attachment(Model):
 
 
 class Error(Model):
-    _valid_properties = {'message', 'success', 'data'}
+    _valid_properties = {"message", "success", "data"}
 
     @classmethod
     def parse(cls, json):

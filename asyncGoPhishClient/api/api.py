@@ -1,9 +1,10 @@
 from asyncGoPhishClient.models import Error
-'''
+
+"""
 api.py 
 
 Base API endpoint class that abstracts basic CRUD operations.
-'''
+"""
 
 
 class APIEndpoint(object):
@@ -24,11 +25,13 @@ class APIEndpoint(object):
         self.endpoint = endpoint
         self._cls = cls
 
-    def get(self,
-            resource_id=None,
-            resource_action=None,
-            resource_cls=None,
-            single_resource=False):
+    def get(
+        self,
+        resource_id=None,
+        resource_action=None,
+        resource_cls=None,
+        single_resource=False,
+    ):
         """ Gets the details for one or more resources by ID
         
         Args:
@@ -49,10 +52,10 @@ class APIEndpoint(object):
             resource_cls = self._cls
 
         if resource_id:
-            endpoint = '{}/{}'.format(endpoint, resource_id)
+            endpoint = "{}/{}".format(endpoint, resource_id)
 
         if resource_action:
-            endpoint = '{}/{}'.format(endpoint, resource_action)
+            endpoint = "{}/{}".format(endpoint, resource_action)
 
         response = self.api.execute("GET", endpoint)
         if not response.ok:
@@ -70,8 +73,7 @@ class APIEndpoint(object):
             resource - gophish.models.Model - The resource instance
 
         """
-        response = self.api.execute(
-            "POST", self.endpoint, json=(resource.as_dict()))
+        response = self.api.execute("POST", self.endpoint, json=(resource.as_dict()))
 
         if not response.ok:
             return Error.parse(response.json())
@@ -88,7 +90,7 @@ class APIEndpoint(object):
         endpoint = self.endpoint
 
         if resource.id:
-            endpoint = '{}/{}'.format(endpoint, resource.id)
+            endpoint = "{}/{}".format(endpoint, resource.id)
 
         response = self.api.execute("PUT", endpoint, json=resource.as_json())
 
@@ -104,7 +106,7 @@ class APIEndpoint(object):
             resource_id - int - The resource ID to be deleted
         """
 
-        endpoint = '{}/{}'.format(self.endpoint, resource_id)
+        endpoint = "{}/{}".format(self.endpoint, resource_id)
 
         response = self.api.execute("DELETE", endpoint)
 
