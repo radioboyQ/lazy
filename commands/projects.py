@@ -12,6 +12,7 @@ import arrow
 import aiodns
 import asyncssh
 import click
+from click.testing import CliRunner
 from lxml import etree, html
 import requests
 
@@ -467,5 +468,7 @@ def find_dcs(ctx, dns_server, domain_name):
     pprint(result, indent=4)
 
 
-# if __name__ == "__main__":
-#     cli()
+if __name__ == "__main__":
+    runner = CliRunner()
+    result = runner.invoke(find_dcs, ["-s", "8.8.8.8", "google.com"])
+    pprint(result.output, indent=4)
