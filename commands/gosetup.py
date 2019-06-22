@@ -32,6 +32,8 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     help="A collection of tools to setup a GoPhish phishing campaign.",
     context_settings=CONTEXT_SETTINGS,
     cls=lazyTools.AliasedGroup,
+    invoke_without_command=True,
+    deprecated=True,
 )
 @click.pass_context
 def cli(ctx):
@@ -374,7 +376,7 @@ def delete_groups(ctx, group_prefix, section_name):
     "--section-name",
     help="Name of the config section to use.",
     type=click.STRING,
-    required=True,
+    required=False,
 )
 @click.pass_context
 def temp(ctx, section_name):
