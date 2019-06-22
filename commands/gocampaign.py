@@ -213,10 +213,13 @@ def cli(ctx, api_key, server, verify, gophish_port, gophish_server, ssh_port, ss
     Group for holding GoPhish tools
     """
 
+    loguru_fmt_str = "{level: <10} - {function: <20} - {message}"
+
     if ctx.parent.params['debug']:
-        logger.add(sys.stdout, level="DEBUG", filter=f"__main__", format="{function: <20} {message: <45}")
+        logger.add(sys.stdout, level="DEBUG", format=loguru_fmt_str)
     else:
-        logger.add(sys.stdout, level="INFO", filter=f"__main__", format="{function: <20} {message: <45}")
+        # logger.add(sys.stdout, level="INFO", filter=f"__main__", format=loguru_fmt_str)
+        logger.add(sys.stdout, level="INFO", format=loguru_fmt_str)
 
     logger.debug("Starting group command")
 
@@ -230,8 +233,6 @@ def cli(ctx, api_key, server, verify, gophish_port, gophish_server, ssh_port, ss
     # Update context object
     ctx.obj.update({'ssh_key_files': ssh_key_files})
     logger.debug(f"Added to Click's Context Object: {ctx.obj}")
-
-    # pprint(vars(ctx.command), indent=4)
 
 
 @cli.command(name='keep-open', context_settings=CONTEXT_SETTINGS, help="Hold SSH Connection Open")
@@ -335,7 +336,7 @@ def campaign_start_helper(ctx, campaign_name, url, dry_run, group_name):
     gophish_server = ctx.parent.params['gophish_server']
     tunnel_active = ctx.obj['tunnel_active']
     tasks_done = ctx.obj['tasks_done']
-    debug = ctx.parent.params['debug']
+    debug = ctx.parent.parent.params['debug']
 
     if debug:
         # If debug is set, don't make the spinner
@@ -485,7 +486,7 @@ def campaign_status_helper(ctx, campaign_id, group_id):
     logger = ctx.obj['logger']
     tunnel_active = ctx.obj['tunnel_active']
     tasks_done = ctx.obj['tasks_done']
-    debug = ctx.parent.params['debug']
+    debug = ctx.parent.parent.params['debug']
 
     # Variables
     campaigns_in_list = list()
@@ -747,7 +748,7 @@ def campaign_details_helper(ctx, campaign_id, all_data, filter_out_sent):
     logger = ctx.obj['logger']
     tunnel_active = ctx.obj['tunnel_active']
     tasks_done = ctx.obj['tasks_done']
-    debug = ctx.parent.params['debug']
+    debug = ctx.parent.parent.params['debug']
 
     if debug:
         # If debug is set, don't make the spinner
@@ -760,7 +761,6 @@ def campaign_details_helper(ctx, campaign_id, all_data, filter_out_sent):
             while not tunnel_active.is_set():
                 # Don't loop so fast, give the CPU a chance to do something else
                 asyncio.run(async_sleep_shim(1.0))
-    click.clear()
 
     # Now that the tunnel is ready, we can define 'gophish_port'
     # Use this in place of the defined 'gophish_port' as SSH will be listening on a dynamic port but always forwarded to 'gophish_port'
@@ -804,47 +804,49 @@ def campaign_details_helper(ctx, campaign_id, all_data, filter_out_sent):
                     <gophish.models.TimelineEntry object at 0x7f1dd3be0518>],
     'url': 'https://greenteohcapital.com'}    
     """
+    try:
+        for result in details.results:
+            """
+            # Results look like this
+    
+            {'email': 'clee@greentechcapital.com',
+            'first_name': 'Catherine',
+            'id': 'BcGwYNZ',
+            'ip': '40.107.234.76',
+            'last_name': 'Lee',
+            'latitude': 38,
+            'longitude': -97,
+            'position': '',
+            'status': 'Submitted Data'}
+    
+            # Just headers
+            result_fields = ["id", "first_name", "last_name", "email", "position", "ip", "latitude", "longitude", "status"]
+            result_dict = {"ID": result.id, "First Name": result.first_name, "Last Name": result.last_name, 
+            "Email": result.email, "Position": result.position, "IP": result.ip, "Latitude": result.latitude, 
+            "Longitude": result.longitude, "Status": result.status}
+            """
 
-    for result in details.results:
-        """
-        # Results look like this
+            if all_data:
+                # Show all the data including IP, lat and long
+                result_dict = {"ID": result.id, "First Name": result.first_name, "Last Name": result.last_name,
+                               "Email": result.email, "Position": result.position, "IP": result.ip,
+                               "Latitude": result.latitude, "Longitude": result.longitude, "Status": result.status}
 
-        {'email': 'clee@greentechcapital.com',
-        'first_name': 'Catherine',
-        'id': 'BcGwYNZ',
-        'ip': '40.107.234.76',
-        'last_name': 'Lee',
-        'latitude': 38,
-        'longitude': -97,
-        'position': '',
-        'status': 'Submitted Data'}
-
-        # Just headers
-        result_fields = ["id", "first_name", "last_name", "email", "position", "ip", "latitude", "longitude", "status"]
-        result_dict = {"ID": result.id, "First Name": result.first_name, "Last Name": result.last_name, 
-        "Email": result.email, "Position": result.position, "IP": result.ip, "Latitude": result.latitude, 
-        "Longitude": result.longitude, "Status": result.status}
-        """
-
-        if all_data:
-            # Show all the data including IP, lat and long
-            result_dict = {"ID": result.id, "First Name": result.first_name, "Last Name": result.last_name,
-                           "Email": result.email, "Position": result.position, "IP": result.ip,
-                           "Latitude": result.latitude, "Longitude": result.longitude, "Status": result.status}
-
-        else:
-            # Just show the important bits
-            if filter_out_sent is True:
-                if result.status != "Email Sent":
+            else:
+                # Just show the important bits
+                if filter_out_sent is True:
+                    if result.status != "Email Sent":
+                        result_dict = {"First Name": result.first_name, "Last Name": result.last_name, "Email": result.email,
+                                       "Status": result.status}
+                        result_list.append(result_dict)
+                else:
                     result_dict = {"First Name": result.first_name, "Last Name": result.last_name, "Email": result.email,
                                    "Status": result.status}
                     result_list.append(result_dict)
-            else:
-                result_dict = {"First Name": result.first_name, "Last Name": result.last_name, "Email": result.email,
-                               "Status": result.status}
-                result_list.append(result_dict)
 
-    click.echo(tabulate(result_list, headers="keys", tablefmt="fancy_grid"))
+        click.echo(tabulate(result_list, headers="keys", tablefmt="fancy_grid"))
+    except AttributeError as e:
+        logger.critical(f"Something went wrong: {e}")
     logger.debug(f"Looks like everything is done, setting tasks_done flag")
     tasks_done.set()
 
