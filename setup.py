@@ -33,5 +33,6 @@ setup(
         "cchardet",
         "aiodns",
         "dataset",
+        "loguru",
     ],
 )
