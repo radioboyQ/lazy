@@ -207,14 +207,13 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option('--ssh-port', default=22, help='Port SSH is running on the server.', type=click.INT)
 @click.option('--ssh-key', help='Path to desired SSH key.', type=click.Path(exists=True, file_okay=True, dir_okay=True, readable=True, resolve_path=True, allow_dash=True), default=lambda: str(Path.home().joinpath('.ssh/')))
 @click.option('--ssh-username', help='Specify an username to use for the SSH connection', type=click.STRING, required=True)
-@click.option('--debug', help='Show debug log messages, otherwise show info messages', type=click.BOOL, is_flag=True)
 @click.pass_context
-def cli(ctx, api_key, server, verify, gophish_port, gophish_server, ssh_port, ssh_key, ssh_username, debug):
+def cli(ctx, api_key, server, verify, gophish_port, gophish_server, ssh_port, ssh_key, ssh_username):
     """
     Group for holding GoPhish tools
     """
 
-    if ctx.params['debug']:
+    if ctx.parent.params['debug']:
         logger.add(sys.stdout, level="DEBUG", filter=f"__main__", format="{function: <20} {message: <45}")
     else:
         logger.add(sys.stdout, level="INFO", filter=f"__main__", format="{function: <20} {message: <45}")
@@ -231,6 +230,8 @@ def cli(ctx, api_key, server, verify, gophish_port, gophish_server, ssh_port, ss
     # Update context object
     ctx.obj.update({'ssh_key_files': ssh_key_files})
     logger.debug(f"Added to Click's Context Object: {ctx.obj}")
+
+    # pprint(vars(ctx.command), indent=4)
 
 
 @cli.command(name='keep-open', context_settings=CONTEXT_SETTINGS, help="Hold SSH Connection Open")
@@ -257,7 +258,7 @@ async def hold_open_shim(ctx):
     """
     tunnel_active = ctx.obj['tunnel_active']
     tasks_done = ctx.obj['tasks_done']
-    debug = ctx.parent.params['debug']
+    debug = ctx.parent.parent.params['debug']
 
     prompt = Prompt()
 
