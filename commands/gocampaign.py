@@ -1,6 +1,7 @@
 import asyncio
 import collections
 import concurrent.futures
+import csv
 from datetime import datetime, timedelta
 import itertools
 from pathlib import Path
@@ -15,6 +16,7 @@ from gophish import Gophish
 from gophish.models import *
 import pendulum
 import pytz
+from requests import Request, Session
 from tabulate import tabulate
 
 # Create logger
@@ -718,8 +720,10 @@ def campaign_status_helper(ctx, campaign_id, group_id):
               default=False, is_flag=True, show_default=True)
 @click.option('--filter-out-sent', help="Don't show results for users with status \"Email Sent\"", default=False,
               is_flag=True, show_default=True)
+@click.option('--only-click', help='Only show users that at least clicked the link', default=False, is_flag=True)
+@click.option('-c', '--csv-out', help='Instead of showing a default table, emit a CSV file', default=False, is_flag=True)
 @click.pass_context
-def campaign_details(ctx, campaign_id, all_data, filter_out_sent):
+def campaign_details(ctx, campaign_id, all_data, filter_out_sent, only_click, csv_out):
     """
     Get campaign details
     """
@@ -727,7 +731,7 @@ def campaign_details(ctx, campaign_id, all_data, filter_out_sent):
 
     loop = asyncio.get_event_loop()
     run_client_future = asyncio.gather(run_client(ctx))
-    campaign_status_future = asyncio.gather(campaign_details_shim(ctx, campaign_id, all_data, filter_out_sent, loop))
+    campaign_status_future = asyncio.gather(campaign_details_shim(ctx, campaign_id, all_data, filter_out_sent, only_click, csv_out, loop))
 
     all_tasks = asyncio.gather(campaign_status_future, run_client_future)
 
@@ -737,7 +741,7 @@ def campaign_details(ctx, campaign_id, all_data, filter_out_sent):
 
     logger.debug(f"Finished event loop")
 
-async def campaign_details_shim(ctx, campaign_id, all_data, filter_out_sent, loop):
+async def campaign_details_shim(ctx, campaign_id, all_data, filter_out_sent, only_click, csv_out, loop):
     """
     Run the blocking code in a executor
     """
@@ -747,9 +751,9 @@ async def campaign_details_shim(ctx, campaign_id, all_data, filter_out_sent, loo
     logger.debug(f"Starting thread pool with {thread_count} threads")
     # Only create 2 threads because we only have 2 tasks
     with concurrent.futures.ThreadPoolExecutor(max_workers=thread_count, thread_name_prefix="ThreadPool1-") as pool:
-        result = await loop.run_in_executor(pool, campaign_details_helper, ctx, campaign_id, all_data, filter_out_sent)
+        result = await loop.run_in_executor(pool, campaign_details_helper, ctx, campaign_id, all_data, filter_out_sent, only_click, csv_out)
 
-def campaign_details_helper(ctx, campaign_id, all_data, filter_out_sent):
+def campaign_details_helper(ctx, campaign_id, all_data, filter_out_sent, only_click, csv_out):
     # Get all the parent options
     verify = ctx.parent.params['verify']
     api_key = ctx.parent.params['api_key']
@@ -841,6 +845,13 @@ def campaign_details_helper(ctx, campaign_id, all_data, filter_out_sent):
                                "Email": result.email, "Position": result.position, "IP": result.ip,
                                "Latitude": result.latitude, "Longitude": result.longitude, "Status": result.status}
 
+            if only_click:
+                # Just show who clicked the link or submitted data
+                if result.status == "Clicked Link" or result.status == "Submitted Data":
+                    result_dict = {"First Name": result.first_name, "Last Name": result.last_name,
+                                   "Email": result.email, "Status": result.status}
+                    result_list.append(result_dict)
+
             else:
                 # Just show the important bits
                 if filter_out_sent is True:
@@ -853,9 +864,172 @@ def campaign_details_helper(ctx, campaign_id, all_data, filter_out_sent):
                                    "Status": result.status}
                     result_list.append(result_dict)
 
-        click.echo(tabulate(result_list, headers="keys", tablefmt="fancy_grid"))
+        if csv_out:
+            # Output data as a CSV file
+            writer = csv.DictWriter(sys.stdout, fieldnames=['First Name', 'Last Name', 'Email', 'Status'])
+            writer.writeheader()
+            writer.writerows(result_list)
+        else:
+            # Output a pretty table
+            click.echo(tabulate(result_list, headers="keys", tablefmt="fancy_grid"))
     except AttributeError as e:
         logger.critical(f"Something went wrong: {e}")
+    logger.debug(f"Looks like everything is done, setting tasks_done flag")
+    tasks_done.set()
+
+
+@cli.command('users-reported', short_help='Mark users who reported in the campaign')
+@click.option('-i', '--campaign-id', help="The ID of a specific campaign to get", default=0, show_default=True, type=click.INT, multiple=True)
+@click.option('-n', '--dry-run', help='Don\'t actually submit data, just show the user what would be done', default=False, is_flag=True)
+@click.argument('user-reported-csv', type=click.Path(exists=True, file_okay=True, dir_okay=False, resolve_path=True, allow_dash=True))
+@click.pass_context
+def users_reported(ctx, campaign_id, dry_run, user_reported_csv):
+    """
+    Flag users who reported the email
+    """
+    logger = ctx.obj['logger']
+
+    loop = asyncio.get_event_loop()
+    run_client_future = asyncio.gather(run_client(ctx))
+    campaign_reporting_future = asyncio.gather(campaign_reporting_shim(ctx, loop))
+
+    all_tasks = asyncio.gather(campaign_reporting_future, run_client_future)
+
+    results = loop.run_until_complete(all_tasks)
+
+    loop.close()
+
+    logger.debug(f"Finished event loop")
+
+async def campaign_reporting_shim(ctx, loop):
+    """
+    Run the blocking code in a executor
+    """
+    thread_count = 2
+    logger = ctx.obj['logger']
+
+    logger.debug(f"Starting thread pool with {thread_count} threads")
+    # Only create 2 threads because we only have 2 tasks
+    with concurrent.futures.ThreadPoolExecutor(max_workers=thread_count, thread_name_prefix="ThreadPool1-") as pool:
+        result = await loop.run_in_executor(pool, campaign_reporting_helper, ctx)
+
+def campaign_reporting_helper(ctx):
+    """
+        Functions to document users who report phishing campaigns
+
+        - List of users who reported
+        - Get RID values for each user
+        - Make GET(?) request at https://{phish_server}/report?rid={1234567}
+        - Check current status
+        """
+
+    """
+    - Timeline object
+    {'email': 'cmueller@greentechcapital.com',
+    'first_name': 'Camille',
+    'id': 'firlRvy',
+    'ip': '52.119.64.117',
+    'last_name': 'Mueller',
+    'latitude': 39.5645,
+    'longitude': -75.597,
+    'position': '',
+    'status': 'Clicked Link'}
+    """
+
+    # Variables
+    verify = ctx.parent.params['verify']
+    api_key = ctx.parent.params['api_key']
+    gophish_server = ctx.parent.params['gophish_server']
+    logger = ctx.obj['logger']
+    tunnel_active = ctx.obj['tunnel_active']
+    tasks_done = ctx.obj['tasks_done']
+    debug = ctx.parent.parent.params['debug']
+    dry_run = ctx.params['dry_run']
+    gophish_reported_emails_csv = ctx.params['user_reported_csv']
+    campaign_id_list = ctx.params["campaign_id"]
+
+    if dry_run:
+        logger.info(f"This is a dry run")
+
+    if debug:
+        # If debug is set, don't make the spinner
+        while not tunnel_active.is_set():
+            logger.debug(f"Is the tunnel active: {tunnel_active.is_set()}")
+            # Don't loop so fast, give the CPU a chance to do something else
+            asyncio.run(async_sleep_shim(1.0))
+    else:
+        with Spinner(title="Waiting on SSH tunnel to be ready", beep=False, disable=False, force=False):
+            while not tunnel_active.is_set():
+                # Don't loop so fast, give the CPU a chance to do something else
+                asyncio.run(async_sleep_shim(1.0))
+
+    # Now that the tunnel is ready, we can define 'gophish_port'
+    # Use this in place of the defined 'gophish_port' as SSH will be listening on a dynamic port but always forwarded to 'gophish_port'
+    gophish_port = ctx.obj['listener_port']
+
+    user_reported_list = list()
+    user_reported_data_list = list()
+    # gophish_reported_emails_csv = Path('/home/radioboy/Documents/Projects/Greentech-Phishing/evidence/UsersWhoReported.csv')
+    # Requests' Session object
+    s = Session()
+
+    # Get info from input CSV
+    # Expecting First Name,Last Name as CSV format
+    with open(gophish_reported_emails_csv, 'r') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            # Expecting a CSV file with two columns, First Name and Last Name
+            # This is a slow and stupid way to look up users, but it works for now
+            user_reported_list.append(
+                {"First Name": row["First Name"], "Last Name": row["Last Name"]})
+
+    logger.debug(f"Client is connecting to server")
+    api = Gophish(api_key, host=f"https://{gophish_server}:{gophish_port}", verify=verify)
+
+    logger.debug(f"Client connected")
+
+    campaigns = api.campaigns.get()
+
+    for c in campaigns:
+        if c.id in campaign_id_list:
+            # For each timeline object in each campaign, match users who reported
+            for r in c.results:
+                """
+                - Result object
+                {'id': 'C3hLqlq', 'first_name': 'Allison', 'last_name': 'Vignola', 'email': 'avignola@greentechcapital.com', 'position': '', 'ip': '52.119.64.117', 'latitude': 39.5645, 'longitude': -75.597, 'status': 'Clicked Link'}
+                """
+                for user in user_reported_list:
+                    if user['First Name'] == r.first_name and user['Last Name'] == r.last_name:
+                        user_reported_data_list.append(
+                            {"First Name": row["First Name"], "Last Name": row["Last Name"], "RID": r.id,
+                             "Status": r.status, "correct": True, "campaign_base_url": c.url})
+
+    # Got list of users that clicked the link
+    # Do some error checking to make sure everything is on the up and up
+    for user in user_reported_data_list:
+        if user['Status'] in ["Clicked Link", "Email Opened", "Submitted Data"]:
+            # Everything seems normal
+            payload = {'rid': user['RID']}
+
+            # Prepare request
+            req = Request('GET', url=f"{user['campaign_base_url']}/report", params=payload)
+            prepped = req.prepare()
+
+            if dry_run:
+                logger.info(f"Reporting with URL: {prepped.url}")
+            else:
+                logger.debug(f"Reporting with URL: {prepped.url}")
+                resp = s.send(prepped, verify=True)
+
+                click.echo(f"Response code is: {resp.status_code}")
+
+        elif user['Status'] in ["Email Sent", "Scheduled"]:
+            # Looks like they heard from someone else about the email
+            click.echo(f"[!] The user {user['First Name']} {user['Last Name']}, might have heard from someone else that a phishing campaign was going on.")
+            click.echo(f"[!] The user {user['First Name']} {user['Last Name']} has the status of {user['Status']} and that seems wrong. Check it out.")
+        else:
+            click.echo(f"[!] The user {user['First Name']} {user['Last Name']} has the status of {user['Status']} and that seems wrong. Check it out.")
+
     logger.debug(f"Looks like everything is done, setting tasks_done flag")
     tasks_done.set()
 
