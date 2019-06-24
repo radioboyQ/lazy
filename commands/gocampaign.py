@@ -44,7 +44,15 @@ async def run_client(ctx):
                                 username=ctx.parent.params['ssh_username'], client_keys=ctx.obj['ssh_key_files'],
                                 known_hosts=None) as conn:
         logger.debug(f"SSH connected to the server successfully")
-        listener = await conn.forward_local_port('', 0, ctx.parent.params['gophish_server'],
+
+        # See if 'port' is set in the params
+        try:
+            ssh_port = ctx.params['port']
+        except:
+            ssh_port = 0
+
+
+        listener = await conn.forward_local_port('', ssh_port, ctx.parent.params['gophish_server'],
                                                  ctx.parent.params['gophish_port'])
         logger.debug(f"Tunnel is started and running")
 
@@ -153,8 +161,8 @@ class Spinner(object):
                 sys.stdout.write(f"{self.title}{self.suffix}{next(self.spinner_cycle)}")
                 sys.stdout.flush()
                 time.sleep(0.25)
-                # sys.stdout.write('\r')
-                sys.stdout.write('\b' * self.term_width)
+                sys.stdout.write('\r')
+                # sys.stdout.write('\b' * self.term_width)
                 sys.stdout.flush()
             else:
                 # No title specified, just be normal
@@ -236,8 +244,9 @@ def cli(ctx, api_key, server, verify, gophish_port, gophish_server, ssh_port, ss
 
 
 @cli.command(name='keep-open', context_settings=CONTEXT_SETTINGS, help="Hold SSH Connection Open")
+@click.option('-p', '--port', help='Specify which port to use for the client side of the SSH tunnel. 0 is a random port', type=click.IntRange(min=0, max=65535), default=0, show_default=True)
 @click.pass_context
-def hold_open(ctx):
+def hold_open(ctx, port):
     """
     Hold open a SSH tunnel
     """
